@@ -1,0 +1,9 @@
+{
+  "description": "Gen 3: clear box 1 slot 8 (Kyogre), take party slot 1, put a Ruby record into box 3 slot 6, append a record to the party.",
+  "ops": [
+    { "op": "deleteBox", "box": 0, "slot": 7 },
+    { "op": "deleteParty", "slot": 0 },
+    { "op": "setBox", "box": 2, "slot": 5, "format": "pk3", "hexFile": "test/fixtures/records/pk3-treecko-leafy.hex" },
+    { "op": "setParty", "format": "pk3", "hexFile": "test/fixtures/records/pk3-groudon-ribbons.hex" }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "description": "Gen 2: remove the egg from box 1, put a Crystal record (with caught data) into box 2, remove the last party member.",
+  "ops": [
+    { "op": "deleteBox", "box": 0, "slot": 0 },
+    { "op": "setBox", "box": 1, "slot": 0, "format": "pk2", "hexFile": "test/fixtures/records/pk2-crystal-pikachu-caught.hex" },
+    { "op": "deleteParty", "slot": 2 }
+  ]
+}

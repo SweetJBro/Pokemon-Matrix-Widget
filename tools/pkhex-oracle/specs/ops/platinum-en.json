@@ -1,0 +1,8 @@
+{
+  "description": "Gen 4: clear box 1 slot 10 (Giratina), take party slot 2, put a Diamond record into box 5 slot 30.",
+  "ops": [
+    { "op": "deleteBox", "box": 0, "slot": 9 },
+    { "op": "deleteParty", "slot": 2 },
+    { "op": "setBox", "box": 4, "slot": 29, "format": "pk4", "hexFile": "test/fixtures/records/pk4-turtwig-shelly.hex" }
+  ]
+}

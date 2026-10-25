@@ -1,0 +1,37 @@
+{
+  "id": "ruby-en",
+  "description": "Pokémon Ruby (international, English). Box 2 holds one Pokémon per PK3 substructure order (PID % 24 = slot).",
+  "game": "R",
+  "lang": "en",
+  "trainer": { "name": "MAY", "tid": 34567, "sid": 45678, "gender": 1, "money": 31415, "playTime": { "h": 21, "m": 22, "s": 23 } },
+  "registerDex": true,
+  "currentBox": 0,
+  "party": [
+    { "species": 252, "level": 15, "nickname": "LEAFY", "nature": "Adamant", "abilityNumber": 0, "gender": "M",
+      "moves": [1, 43, 71, 98], "ppUps": [0, 1, 2, 3], "metLocation": 16, "metLevel": 5, "ball": 4,
+      "ivs": { "hp": 20, "atk": 21, "def": 22, "spa": 23, "spd": 24, "spe": 25 },
+      "evs": { "hp": 10, "atk": 20, "def": 30, "spa": 40, "spd": 50, "spe": 60 }, "friendship": 120, "markings": 5 },
+    { "species": 263, "level": 8, "heldItem": 139, "moves": [33, 45, 39], "metLocation": 17, "metLevel": 3, "ball": 4, "nature": "Jolly" },
+    { "species": 280, "level": 10, "shiny": true, "gender": "F", "nature": "Modest", "moves": [45, 93], "metLocation": 18, "metLevel": 4, "ball": 2 }
+  ],
+  "boxes": [
+    { "box": 0, "slot": 0, "species": 298, "isEgg": true, "moves": [150, 39], "metLocation": 32, "ball": 4 },
+    { "box": 0, "slot": 3, "species": 201, "form": 7, "level": 25, "moves": [237], "metLocation": 52, "metLevel": 25, "ball": 3 },
+    { "box": 0, "slot": 7, "species": 384, "level": 70, "moves": [242, 245, 200, 63], "ppUps": [3, 3, 3, 3],
+      "ivs": { "hp": 31, "atk": 31, "def": 31, "spa": 31, "spd": 31, "spe": 31 },
+      "evs": { "hp": 255, "atk": 255, "def": 255, "spa": 255, "spd": 255, "spe": 255 },
+      "metLocation": 89, "metLevel": 70, "ball": 1, "abilityNumber": 0 },
+    { "box": 0, "slot": 12, "species": 383, "level": 100, "moves": [89, 76, 126, 104], "metLocation": 90, "metLevel": 45, "ball": 12,
+      "ribbons": { "RibbonChampionG3": true, "RibbonCountG3Cool": 4, "RibbonCountG3Tough": 2, "RibbonEffort": true },
+      "contest": { "cool": 255, "beauty": 10, "cute": 20, "smart": 30, "tough": 40, "sheen": 255 },
+      "pokerus": { "strain": 5, "days": 0 } },
+    { "box": 0, "slot": 29, "species": 25, "level": 20, "language": "ja", "otName": "サトシ", "tid": 1, "sid": 2, "otGender": 0,
+      "moves": [84, 45, 98], "metLocation": 255, "metLevel": 20, "metVersion": "R", "ball": 4 },
+    { "box": 13, "slot": 29, "species": 380, "level": 40, "gender": "F", "moves": [149, 54, 287, 225], "metLocation": 87, "metLevel": 40, "ball": 4 }
+  ],
+  "fill": [
+    { "box": 1, "start": 0, "count": 24, "shuffleOrders": true,
+      "species": [252, 253, 254, 255, 256, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272, 273, 274, 275],
+      "template": { "level": 10, "moves": [33, 45], "metLocation": 16, "metLevel": 10 } }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "id": "black-ja",
+  "description": "Pokémon Black (Japanese language; same Gen 5 layout, Japanese text). Box 2 holds one Pokémon per PK5 block order.",
+  "game": "B",
+  "lang": "ja",
+  "trainer": { "name": "トウヤ", "tid": 31313, "sid": 42424, "gender": 0, "money": 25000, "playTime": { "h": 10, "m": 20, "s": 30 } },
+  "registerDex": true,
+  "currentBox": 0,
+  "party": [
+    { "species": 498, "level": 15, "nickname": "ポカ", "nature": "Brave", "gender": "M", "moves": [33, 39, 52, 111],
+      "metLocation": 4, "metLevel": 5, "metDate": "2010-09-18", "ball": 4 },
+    { "species": 25, "level": 20, "heldItem": 236, "moves": [84, 45, 98, 86], "metLocation": 32, "metLevel": 18, "metDate": "2010-09-19", "ball": 4 },
+    { "species": 543, "level": 25, "shiny": true, "gender": "F", "moves": [40, 111, 205], "metLocation": 56, "metLevel": 20, "metDate": "2010-09-20", "ball": 4 }
+  ],
+  "boxes": [
+    { "box": 0, "slot": 0, "species": 588, "isEgg": true, "moves": [64, 43], "eggLocation": 60002, "eggDate": "2010-09-21", "ball": 4 },
+    { "box": 0, "slot": 4, "species": 201, "form": 4, "level": 30, "moves": [237], "metLocation": 30001, "metLevel": 30, "metDate": "2010-09-22", "metVersion": "SS", "ball": 4 },
+    { "box": 0, "slot": 9, "species": 644, "level": 70, "moves": [550, 225, 337, 85], "ppUps": [3, 3, 3, 3],
+      "ivs": { "hp": 31, "atk": 31, "def": 31, "spa": 31, "spd": 31, "spe": 31 },
+      "evs": { "hp": 255, "atk": 255, "def": 255, "spa": 255, "spd": 255, "spe": 255 },
+      "metLocation": 101, "metLevel": 50, "metDate": "2010-09-23", "ball": 1 },
+    { "box": 0, "slot": 17, "species": 553, "level": 100, "moves": [242, 89, 444, 14], "metLocation": 56, "metLevel": 40, "metDate": "2010-09-24", "ball": 4 },
+    { "box": 0, "slot": 29, "species": 585, "form": 1, "level": 25, "moves": [33, 39], "language": "en", "otName": "HILDA", "tid": 904, "sid": 905, "otGender": 1,
+      "metLocation": 30003, "metLevel": 25, "metDate": "2010-09-25", "metVersion": "W", "ball": 4 },
+    { "box": 23, "slot": 29, "species": 643, "level": 50, "moves": [551, 225, 337, 394], "metLocation": 101, "metLevel": 50, "metDate": "2010-09-26", "ball": 2 }
+  ],
+  "fill": [
+    { "box": 1, "start": 0, "count": 24, "shuffleOrders": true,
+      "species": [542, 543, 544, 545, 546, 547, 548, 549, 550, 551, 552, 553, 554, 555, 556, 557, 558, 559, 560, 561, 562, 563, 564, 565],
+      "template": { "level": 16, "moves": [33, 45], "metLocation": 32, "metLevel": 16, "metDate": "2010-09-27" } }
+  ]
+}

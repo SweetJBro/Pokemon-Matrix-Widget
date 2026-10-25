@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Development-only differential-testing oracle. NOT part of the shipped widget.
+    PKHeX.Core is GPLv3 and is consumed only as a NuGet package reference; no PKHeX
+    source is copied into this repository.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>pkhex-oracle</AssemblyName>
+    <RootNamespace>PkhexOracle</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 24.7.27 is the last PKHeX.Core release that targets net8.0 (24.11.x and later need net9/net10). -->
+    <PackageReference Include="PKHeX.Core" Version="24.7.27" />
+  </ItemGroup>
+
+</Project>

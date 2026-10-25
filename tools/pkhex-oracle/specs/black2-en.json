@@ -1,0 +1,33 @@
+{
+  "id": "black2-en",
+  "description": "Pokémon Black 2 (international, English). Box 2 holds one Pokémon per PK5 block order.",
+  "game": "B2",
+  "lang": "en",
+  "trainer": { "name": "NATE", "tid": 11112, "sid": 22223, "gender": 0, "money": 123123, "playTime": { "h": 15, "m": 16, "s": 17 } },
+  "registerDex": true,
+  "currentBox": 0,
+  "party": [
+    { "species": 501, "level": 15, "nickname": "SHELL", "nature": "Calm", "gender": "F", "moves": [33, 39, 55, 117],
+      "metLocation": 117, "metLevel": 5, "metDate": "2012-10-07", "ball": 4 },
+    { "species": 25, "level": 20, "heldItem": 234, "moves": [84, 45, 98, 86], "metLocation": 124, "metLevel": 18, "metDate": "2012-10-08", "ball": 4 },
+    { "species": 570, "level": 25, "shiny": true, "gender": "M", "nature": "Naive", "moves": [10, 43, 468, 185], "metLocation": 37, "metLevel": 20, "metDate": "2012-10-09", "ball": 4 }
+  ],
+  "boxes": [
+    { "box": 0, "slot": 0, "species": 446, "isEgg": true, "moves": [118, 33], "eggLocation": 60002, "eggDate": "2012-10-10", "ball": 4 },
+    { "box": 0, "slot": 4, "species": 201, "form": 25, "level": 30, "moves": [237], "metLocation": 30001, "metLevel": 30, "metDate": "2012-10-11", "metVersion": "HG", "ball": 4 },
+    { "box": 0, "slot": 9, "species": 646, "level": 70, "moves": [549, 558, 403, 304], "ppUps": [3, 3, 3, 3],
+      "ivs": { "hp": 31, "atk": 31, "def": 31, "spa": 31, "spd": 31, "spe": 31 },
+      "evs": { "hp": 255, "atk": 255, "def": 255, "spa": 255, "spd": 255, "spe": 255 },
+      "metLocation": 61, "metLevel": 70, "metDate": "2012-10-12", "ball": 1 },
+    { "box": 0, "slot": 17, "species": 635, "level": 100, "moves": [406, 94, 399, 53], "metLocation": 25, "metLevel": 50, "metDate": "2012-10-13", "ball": 4,
+      "pokeStarFame": 255 },
+    { "box": 0, "slot": 29, "species": 585, "form": 2, "level": 25, "moves": [33, 39], "language": "de", "otName": "LUKAS", "tid": 902, "sid": 903, "otGender": 0,
+      "metLocation": 30003, "metLevel": 25, "metDate": "2012-10-14", "metVersion": "W2", "ball": 4 },
+    { "box": 23, "slot": 29, "species": 638, "level": 45, "moves": [43, 533, 446, 98], "metLocation": 26, "metLevel": 45, "metDate": "2012-10-15", "ball": 4 }
+  ],
+  "fill": [
+    { "box": 1, "start": 0, "count": 24, "shuffleOrders": true,
+      "species": [518, 519, 520, 521, 522, 523, 524, 525, 526, 527, 528, 529, 530, 531, 532, 533, 534, 535, 536, 537, 538, 539, 540, 541],
+      "template": { "level": 14, "moves": [33, 45], "metLocation": 124, "metLevel": 14, "metDate": "2012-10-16" } }
+  ]
+}

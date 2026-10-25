@@ -1,0 +1,32 @@
+{
+  "id": "ruby-ja",
+  "description": "Pokémon Ruby (Japanese: 5-character names, Japanese character table). Box 2 holds one Pokémon per substructure order.",
+  "game": "R",
+  "lang": "ja",
+  "trainer": { "name": "ハルカ", "tid": 11223, "sid": 33445, "gender": 1, "money": 1000, "playTime": { "h": 2, "m": 3, "s": 4 } },
+  "registerDex": true,
+  "currentBox": 0,
+  "party": [
+    { "species": 255, "level": 15, "nickname": "アチャ", "nature": "Naive", "gender": "F", "moves": [10, 45, 52, 116],
+      "metLocation": 16, "metLevel": 5, "ball": 4 },
+    { "species": 263, "level": 8, "heldItem": 139, "moves": [33, 45, 39], "metLocation": 17, "metLevel": 3, "ball": 4 },
+    { "species": 280, "level": 10, "shiny": true, "gender": "M", "moves": [45, 93], "metLocation": 18, "metLevel": 4, "ball": 2 }
+  ],
+  "boxes": [
+    { "box": 0, "slot": 0, "species": 298, "isEgg": true, "moves": [150, 39], "metLocation": 32, "ball": 4 },
+    { "box": 0, "slot": 3, "species": 201, "form": 26, "level": 25, "moves": [237], "metLocation": 255, "metLevel": 25, "metVersion": "LG", "ball": 4 },
+    { "box": 0, "slot": 7, "species": 383, "level": 70, "moves": [89, 76, 126, 104], "ppUps": [3, 3, 3, 3],
+      "ivs": { "hp": 31, "atk": 31, "def": 31, "spa": 31, "spd": 31, "spe": 31 },
+      "evs": { "hp": 255, "atk": 255, "def": 255, "spa": 255, "spd": 255, "spe": 255 },
+      "metLocation": 72, "metLevel": 70, "ball": 1 },
+    { "box": 0, "slot": 12, "species": 376, "level": 100, "moves": [309, 94, 182, 89], "metLocation": 60, "metLevel": 45, "ball": 2 },
+    { "box": 0, "slot": 29, "species": 25, "level": 20, "language": "en", "otName": "ASH", "tid": 1, "sid": 2, "otGender": 0,
+      "moves": [84, 45, 98], "metLocation": 255, "metLevel": 20, "metVersion": "S", "ball": 4 },
+    { "box": 13, "slot": 29, "species": 380, "level": 40, "gender": "F", "moves": [149, 54, 287, 225], "metLocation": 87, "metLevel": 40, "ball": 4 }
+  ],
+  "fill": [
+    { "box": 1, "start": 0, "count": 24, "shuffleOrders": true,
+      "species": [300, 301, 302, 303, 304, 305, 306, 307, 308, 309, 310, 311, 312, 313, 314, 315, 316, 317, 318, 319, 320, 321, 322, 323],
+      "template": { "level": 15, "moves": [33, 45], "metLocation": 19, "metLevel": 15 } }
+  ]
+}

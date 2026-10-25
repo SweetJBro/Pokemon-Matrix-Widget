@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fake Matrix client (dev harness)</title>
+<!--
+  Two widgets (Alice, Bob) side by side under a fake Matrix client built from matrix-widget-api's
+  own ClientWidgetApi, so the widget talks the real wire protocol. Run the server with
+  DEV_AUTH=1 (scripts/dev.sh) and open /dev/fake-matrix.html.
+
+  What it fakes, and why (docs/research/matrix-widget.md §1.4, §1.6, §6):
+  * capabilities: everything requested is approved (logged).
+  * setViewedRoomId(ROOM): makes the client push the member list through `update_state`, the
+    way Element Web does, instead of the deprecated send_event path.
+  * readRoomTimeline: only what happened in this session (like Element, whose readStateEvents
+    sees the loaded timeline only); readRoomState: the full member list (like Commet).
+  * get_openid: two-phase like Element/Commet: first observer update "request", then "allowed"
+    with { access_token: "dev:" + userId, matrix_server_name, expires_in: 3600, token_type }.
+    The server accepts "dev:@user:server" tokens only with DEV_AUTH=1. Per frame: allow
+    (after a short "user thinks" delay), ask (buttons above the frame) or deny.
+  * Member changes (Carol joins/leaves, Bob renames) go out with feedStateUpdate(); room events
+    sent by a widget are relayed to every frame with feedEvent().
+  Harness URL options: ?noroom=1 leaves roomId out of the widget URL (the widget then learns it
+  from member state), ?templates=1 passes unsubstituted "$matrix_*" values like a client that
+  does no templating. window.__log collects log lines for automated checks.
+-->
+<style>
+  :root { color-scheme: dark; font-family: system-ui, sans-serif; font-size: 14px; }
+  body { margin: 0; background: #16181d; color: #d8dbe2; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 12px; background: #20232b; border-bottom: 1px solid #33363f; }
+  header h1 { font-size: 15px; margin: 0 12px 0 0; }
+  header code { color: #9ab; }
+  button, select { font: inherit; background: #2b2f3a; color: #e6e8ee; border: 1px solid #454a57; border-radius: 6px; padding: 4px 8px; cursor: pointer; }
+  button:hover { border-color: #778; }
+  a { color: #7cc4ff; }
+  .spacer { flex: 1; }
+  .frames { display: flex; gap: 10px; padding: 10px; align-items: flex-start; }
+  .frame { flex: 1; min-width: 0; display: flex; flex-direction: column; background: #20232b; border: 1px solid #33363f; border-radius: 8px; overflow: hidden; }
+  .frame.fixed { flex: none; }
+  .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 8px; border-bottom: 1px solid #33363f; }
+  .bar b { margin-right: 4px; }
+  .status { margin-left: auto; font-size: 12px; color: #9aa; }
+  .prompt { display: flex; align-items: center; gap: 8px; padding: 8px; background: #3a3320; border-bottom: 1px solid #6a5a2a; }
+  .prompt[hidden] { display: none; }
+  iframe { width: 100%; height: 640px; border: 0; background: #0f1320; display: block; }
+  #log { font: 12px ui-monospace, monospace; white-space: pre-wrap; margin: 0 10px 10px; padding: 8px; max-height: 240px; overflow: auto; background: #101216; border: 1px solid #33363f; border-radius: 8px; }
+  @media (max-width: 900px) { .frames { flex-direction: column; } .frame { width: 100%; } }
+</style>
+<script src="../vendor/matrix-widget-api/api.min.js"></script>
+</head><body>
+<header>
+  <h1>Fake Matrix client</h1>
+  <span>room <code id="room-id"></code></span>
+  <button id="carol-join" type="button">Carol joins</button>
+  <button id="carol-leave" type="button">Carol leaves</button>
+  <button id="bob-rename" type="button">Rename Bob</button>
+  <button id="theme" type="button">Theme: dark</button>
+  <button id="reload-all" type="button">Reload both</button>
+  <span class="spacer"></span>
+  <a href="../" target="_blank" rel="noopener">Plain tab (dev login)</a>
+</header>
+<div class="frames" id="frames"></div>
+<pre id="log"></pre>
+<script>
+"use strict";
+const mx = typeof mxwidgets === "function" ? mxwidgets() : mxwidgets;
+const harness = new URLSearchParams(location.search);
+const WIDGET_BASE = new URL("../", location.href).href;
+const ROOM = "!pokemon-dev:example.org";
+const SERVER_NAME = "example.org";
+const users = {
+  alice: { id: "@alice:example.org", name: "Alice" },
+  bob: { id: "@bob:example.org", name: "Bob" },
+};
+const frames = {};        // who -> { api, iframe, section, statusEl, promptEl, openidSel }
+const timeline = [];      // events "seen" this session (what Element's readStateEvents would see)
+const memberState = new Map();   // state_key -> member event (the real room state)
+let theme = "dark";
+let seq = 0;
+window.__log = [];
+
+document.getElementById("room-id").textContent = ROOM;
+
+function log(...parts) {
+  const s = new Date().toISOString().slice(11, 23) + " " + parts.map((x) => typeof x === "string" ? x : JSON.stringify(x)).join(" ");
+  window.__log.push(s);
+  const el = document.getElementById("log");
+  el.textContent += s + "\n";
+  el.scrollTop = el.scrollHeight;
+}
+
+function memberEvent(userId, displayname, membership = "join") {
+  return {
+    type: "m.room.member", state_key: userId, sender: userId, room_id: ROOM,
+    event_id: "$member" + (++seq) + Math.random().toString(36).slice(2, 8),
+    origin_server_ts: Date.now(), unsigned: {},
+    content: { membership, displayname },
+  };
+}
+for (const u of Object.values(users)) memberState.set(u.id, memberEvent(u.id, u.name));
+memberState.set("@oak:example.org", memberEvent("@oak:example.org", "Professor Oak"));   // member without the widget open
+
+/** Update room state and push it to every widget, as a client does on a new state event. */
+function setState(ev) {
+  memberState.set(ev.state_key, ev);
+  timeline.push(ev);
+  for (const [who, f] of Object.entries(frames)) {
+    f.api.feedStateUpdate(ev).then(() => log(who, "<- update_state", ev.state_key, ev.content.membership, ev.content.displayname || ""),
+      (e) => log(who, "feedStateUpdate failed:", e.message));
+  }
+}
+
+function makeDriver(who) {
+  const u = users[who];
+  class Driver extends mx.WidgetDriver {
+    validateCapabilities(requested) {
+      log(who, "capabilities requested", [...requested], "-> all approved");
+      return Promise.resolve(new Set(requested));
+    }
+    getKnownRooms() { return [ROOM]; }
+    async sendEvent(eventType, content, stateKey, roomId) {
+      const ev = {
+        type: eventType, content, sender: u.id, room_id: roomId || ROOM, unsigned: {},
+        event_id: "$ev" + (++seq) + Math.random().toString(36).slice(2, 8), origin_server_ts: Date.now(),
+      };
+      if (stateKey !== null && stateKey !== undefined) { ev.state_key = stateKey; log(who, "sent state", eventType, stateKey); setState(ev); }
+      else {
+        timeline.push(ev);
+        log(who, "sent", eventType, content);
+        for (const [name, f] of Object.entries(frames)) {
+          f.api.feedEvent(ev).catch((e) => log("feed to", name, "failed:", e.message));
+        }
+      }
+      return { roomId: ev.room_id, eventId: ev.event_id };
+    }
+    async readRoomTimeline(roomId, eventType, msgtype, stateKey, limit) {
+      // Like Element's driver: a state read without a specific key arrives here with
+      // stateKey === undefined and matches every timeline event of that type.
+      let evs = timeline.filter((e) => e.room_id === roomId && e.type === eventType);
+      if (stateKey !== undefined) evs = evs.filter((e) => e.state_key === stateKey);
+      if (msgtype) evs = evs.filter((e) => e.content && e.content.msgtype === msgtype);
+      log(who, "-> read_events", eventType, "-> " + evs.length + " from the timeline");
+      return evs.slice(-(limit || evs.length || 1));
+    }
+    async readRoomState(roomId, eventType, stateKey) {
+      if (roomId !== ROOM || eventType !== "m.room.member") return [];
+      const all = [...memberState.values()];
+      return stateKey === undefined ? all : all.filter((e) => e.state_key === stateKey);
+    }
+    askOpenID(observer) {
+      const f = frames[who];
+      const mode = f.openidSel.value;
+      log(who, "-> get_openid (mode " + mode + ")");
+      const allow = () => {
+        const token = { access_token: "dev:" + u.id, matrix_server_name: SERVER_NAME, expires_in: 3600, token_type: "Bearer" };
+        log(who, "<- openid_credentials allowed");
+        f.statusEl.textContent = "OpenID allowed";
+        observer.update({ state: mx.OpenIDRequestState.Allowed, token });
+      };
+      const deny = () => {
+        log(who, "<- openid blocked");
+        f.statusEl.textContent = "OpenID denied";
+        observer.update({ state: mx.OpenIDRequestState.Blocked });
+      };
+      // Phase 1: "request" (the user is being asked), exactly like Element and Commet.
+      observer.update({ state: mx.OpenIDRequestState.PendingUserConfirmation });
+      log(who, "<- openid state=request (phase 1)");
+      if (mode === "deny") { setTimeout(deny, 300); return; }
+      if (mode === "allow") { setTimeout(allow, 500); return; }
+      f.promptEl.hidden = false;
+      f.statusEl.textContent = "OpenID prompt open";
+      const finish = (ok) => { f.promptEl.hidden = true; ok ? allow() : deny(); };
+      f.promptEl.querySelector(".allow").onclick = () => finish(true);
+      f.promptEl.querySelector(".deny").onclick = () => finish(false);
+    }
+  }
+  return new Driver();
+}
+
+function widgetUrl(who) {
+  const u = users[who];
+  const p = new URLSearchParams();
+  p.set("widgetId", "w_" + who);
+  p.set("parentUrl", location.href);
+  const tpl = harness.get("templates") === "1";
+  if (harness.get("noroom") !== "1") p.set("roomId", tpl ? "$matrix_room_id" : ROOM);
+  p.set("userId", tpl ? "$matrix_user_id" : u.id);
+  p.set("displayName", tpl ? "$matrix_display_name" : u.name);
+  p.set("theme", tpl ? "$org.matrix.msc2873.client_theme" : theme);
+  p.set("lang", "en");
+  return WIDGET_BASE + "?" + p.toString();
+}
+
+function buildFrame(who) {
+  const u = users[who];
+  const section = document.createElement("section");
+  section.className = "frame";
+  section.innerHTML = `
+    <div class="bar">
+      <b></b><code></code>
+      <label>OpenID <select class="openid">
+        <option value="allow">allow (two-phase)</option><option value="ask">ask me</option><option value="deny">deny</option>
+      </select></label>
+      <label>Width <select class="width">
+        <option value="">fill</option><option value="320">320</option><option value="360">360</option><option value="420">420</option>
+      </select></label>
+      <button type="button" class="reload">Reload</button>
+      <span class="status">loading</span>
+    </div>
+    <div class="prompt" hidden><span class="q"></span><button type="button" class="allow">Allow</button><button type="button" class="deny">Deny</button></div>`;
+  section.querySelector("b").textContent = u.name;
+  section.querySelector("code").textContent = u.id;
+  section.querySelector(".q").textContent = `“Box Link” wants to verify that you are ${u.id}.`;
+  document.getElementById("frames").appendChild(section);
+  const f = frames[who] = {
+    section,
+    statusEl: section.querySelector(".status"),
+    promptEl: section.querySelector(".prompt"),
+    openidSel: section.querySelector(".openid"),
+    iframe: null, api: null,
+  };
+  section.querySelector(".reload").onclick = () => mount(who);
+  section.querySelector(".width").onchange = (e) => {
+    const w = e.target.value;
+    section.classList.toggle("fixed", !!w);
+    section.style.width = w ? (Number(w) + 2) + "px" : "";
+  };
+  mount(who);
+}
+
+function mount(who) {
+  const u = users[who];
+  const f = frames[who];
+  if (f.api) { try { f.api.stop(); } catch (e) { /* already stopped */ } }
+  if (f.iframe) f.iframe.remove();
+  f.promptEl.hidden = true;
+  const url = widgetUrl(who);
+  const iframe = document.createElement("iframe");
+  iframe.title = u.name + "'s widget";
+  // Element's sandbox (AppTile.tsx): note there is no allow-modals.
+  iframe.setAttribute("sandbox", "allow-forms allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts allow-presentation allow-downloads");
+  iframe.setAttribute("allow", "clipboard-write; clipboard-read;");
+  f.section.appendChild(iframe);
+  f.iframe = iframe;
+  const widget = new mx.Widget({ id: "w_" + who, creatorUserId: u.id, type: "m.custom", url, name: "Box Link" });
+  const api = new mx.ClientWidgetApi(widget, iframe, makeDriver(who));
+  f.api = api;
+  api.setViewedRoomId(ROOM);   // full member state goes out via update_state after approval
+  api.on("preparing", () => { f.statusEl.textContent = "preparing"; log(who, "widget preparing"); });
+  api.on("ready", () => { f.statusEl.textContent = "ready"; log(who, "widget ready (capabilities approved)"); });
+  api.on("error:preparing", (e) => log(who, "preparing failed", String(e && e.message || e)));
+  api.on("action:content_loaded", () => log(who, "-> content_loaded (the widget should not send this)"));
+  iframe.src = url;
+  log(who, "mounted", url);
+}
+
+document.getElementById("carol-join").onclick = () => setState(memberEvent("@carol:example.org", "Carol"));
+document.getElementById("carol-leave").onclick = () => setState(memberEvent("@carol:example.org", "Carol", "leave"));
+document.getElementById("bob-rename").onclick = () => {
+  const cur = memberState.get(users.bob.id);
+  const next = cur.content.displayname === "Bob" ? "Bob <b>the Builder</b>" : "Bob";
+  setState(memberEvent(users.bob.id, next));
+};
+document.getElementById("theme").onclick = (e) => {
+  theme = theme === "dark" ? "light" : "dark";
+  e.target.textContent = "Theme: " + theme;
+  for (const [who, f] of Object.entries(frames)) {
+    f.api.updateTheme({ name: theme }).then(() => log(who, "<- theme_change", theme), (err) => log(who, "theme_change failed:", err.message));
+  }
+};
+document.getElementById("reload-all").onclick = () => { for (const who of Object.keys(frames)) mount(who); };
+
+buildFrame("alice");
+buildFrame("bob");
+</script></body></html>

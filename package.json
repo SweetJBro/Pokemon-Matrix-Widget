@@ -1,0 +1,22 @@
+{
+  "name": "pokemon-matrix-widget",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pokémon Gen 1-5 Home storage, trading and battling as a Matrix room widget, working from emulator and PC-port save files",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "DEV_AUTH=1 HOST=127.0.0.1 node --watch server/index.js",
+    "test": "node --test test/",
+    "build-data": "node scripts/build-data.mjs"
+  },
+  "dependencies": {
+    "@pkmn/randoms": "0.10.11",
+    "@pkmn/sim": "0.10.11",
+    "ws": "^8.18.0"
+  }
+}

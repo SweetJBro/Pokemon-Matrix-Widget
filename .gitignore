@@ -1,0 +1,13 @@
+node_modules/
+.env
+data/
+*.sav
+*.srm
+*.dsv
+!test/fixtures/**
+
+# dev-only PKHeX oracle build output
+tools/pkhex-oracle/bin/
+tools/pkhex-oracle/obj/
+.stage*-workflow.js
+.workflows/

@@ -1,0 +1,27 @@
+{
+  "id": "gold-en",
+  "description": "Pokémon Gold (international layout, English)",
+  "game": "GD",
+  "lang": "en",
+  "trainer": { "name": "GOLD", "tid": 23456, "money": 12345, "playTime": { "h": 25, "m": 0, "s": 30 } },
+  "registerDex": true,
+  "currentBox": 0,
+  "party": [
+    { "species": 155, "level": 14, "nickname": "BLAZE", "moves": [33, 43, 108, 52], "friendship": 120 },
+    { "species": 25, "level": 18, "heldItem": 163, "moves": [84, 45, 98, 86], "ppUps": [1, 2, 3, 0] },
+    { "species": 130, "level": 30, "shiny": true, "moves": [44, 82, 43, 56] }
+  ],
+  "boxes": [
+    { "box": 0, "slot": 0, "species": 175, "isEgg": true, "level": 5, "moves": [45, 204] },
+    { "box": 0, "slot": 1, "species": 201, "form": 16, "level": 20, "moves": [237] },
+    { "box": 0, "slot": 2, "species": 249, "level": 70, "moves": [177, 219, 16, 105], "ppUps": [3, 3, 3, 3],
+      "dvs": { "atk": 15, "def": 15, "spe": 15, "spc": 15 },
+      "statExp": { "hp": 65535, "atk": 65535, "def": 65535, "spe": 65535, "spc": 65535 } },
+    { "box": 0, "slot": 3, "species": 250, "level": 100, "moves": [221, 241, 126, 105] },
+    { "box": 0, "slot": 4, "species": 152, "level": 5, "moves": [33, 45], "pokerus": { "strain": 1, "days": 2 },
+      "otName": "SILVER", "tid": 11111, "heldItem": 173 }
+  ],
+  "fill": [
+    { "box": 13, "start": 0, "count": 20, "speciesStart": 161, "levelStep": 1, "template": { "level": 5, "moves": [33] } }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "id": "diamond-en",
+  "description": "Pokémon Diamond (international, English). Box 2 holds one Pokémon per PK4 block order (((PID >> 13) & 31) % 24 = slot).",
+  "game": "D",
+  "lang": "en",
+  "trainer": { "name": "LUCAS", "tid": 45678, "sid": 56789, "gender": 0, "money": 123456, "playTime": { "h": 33, "m": 44, "s": 55 } },
+  "registerDex": true,
+  "currentBox": 0,
+  "party": [
+    { "species": 387, "level": 15, "nickname": "SHELLY", "nature": "Adamant", "gender": "F", "moves": [33, 74, 75, 71], "ppUps": [3, 2, 1, 0],
+      "metLocation": 16, "metLevel": 5, "metDate": "2010-01-02", "ball": 4, "groundTile": 2, "friendship": 140, "markings": 21,
+      "ivs": { "hp": 31, "atk": 0, "def": 31, "spa": 0, "spd": 31, "spe": 0 }, "evs": { "hp": 4, "atk": 252, "spe": 252 } },
+    { "species": 25, "level": 20, "heldItem": 236, "moves": [84, 45, 98, 86], "metLocation": 52, "metLevel": 18, "metDate": "2010-02-03", "ball": 3 },
+    { "species": 443, "level": 25, "shiny": true, "gender": "F", "nature": "Jolly", "moves": [33, 328, 225, 44],
+      "metLocation": 82, "metLevel": 20, "metDate": "2010-03-04", "ball": 6, "groundTile": 3 }
+  ],
+  "boxes": [
+    { "box": 0, "slot": 0, "species": 447, "isEgg": true, "moves": [98, 193, 197], "eggLocation": 2000, "eggDate": "2010-04-05", "ball": 4 },
+    { "box": 0, "slot": 4, "species": 201, "form": 16, "level": 22, "moves": [237], "metLocation": 50, "metLevel": 22, "metDate": "2010-05-06", "ball": 4 },
+    { "box": 0, "slot": 9, "species": 483, "level": 70, "moves": [459, 414, 430, 337], "ppUps": [3, 3, 3, 3],
+      "ivs": { "hp": 31, "atk": 31, "def": 31, "spa": 31, "spd": 31, "spe": 31 },
+      "evs": { "hp": 255, "atk": 255, "def": 255, "spa": 255, "spd": 255, "spe": 255 },
+      "metLocation": 34, "metLevel": 47, "metDate": "2010-06-07", "ball": 1,
+      "ribbons": ["RibbonChampionSinnoh", "RibbonG4Cool", "RibbonG4CoolGreat", "RibbonGorgeous"],
+      "contest": { "cool": 255, "beauty": 0, "cute": 0, "smart": 0, "tough": 0, "sheen": 255 } },
+    { "box": 0, "slot": 17, "species": 445, "level": 100, "moves": [200, 89, 337, 14], "metLocation": 77, "metLevel": 48, "metDate": "2010-07-08", "ball": 4,
+      "pokerus": { "strain": 9, "days": 0 } },
+    { "box": 0, "slot": 25, "species": 400, "level": 40, "moves": [57, 70, 249, 432], "metLocation": 16, "metLevel": 5, "metDate": "2010-01-03", "ball": 4 },
+    { "box": 0, "slot": 29, "species": 422, "form": 1, "level": 20, "moves": [189, 213, 189], "language": "ja", "otName": "ヒカリ", "tid": 100, "sid": 200, "otGender": 1,
+      "metLocation": 25, "metLevel": 20, "metDate": "2010-08-09", "ball": 4 },
+    { "box": 17, "slot": 29, "species": 480, "level": 50, "moves": [93, 248, 129, 253], "metLocation": 89, "metLevel": 50, "metDate": "2010-09-10", "ball": 2 }
+  ],
+  "fill": [
+    { "box": 1, "start": 0, "count": 24, "shuffleOrders": true,
+      "species": [387, 388, 389, 390, 391, 392, 393, 394, 395, 396, 397, 398, 399, 400, 401, 402, 403, 404, 405, 406, 407, 408, 409, 410],
+      "template": { "level": 10, "moves": [33, 45], "metLocation": 16, "metLevel": 10, "metDate": "2010-01-01" } }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "id": "crystal-ja",
+  "description": "Pokémon Crystal (Japanese layout, 64 KiB SRAM image)",
+  "game": "C",
+  "lang": "ja",
+  "trainer": { "name": "クリス", "tid": 56789, "gender": 1, "money": 7777, "playTime": { "h": 7, "m": 7, "s": 7 } },
+  "registerDex": true,
+  "currentBox": 0,
+  "party": [
+    { "species": 155, "level": 14, "nickname": "ヒノ", "moves": [33, 43, 108, 52], "metLevel": 5, "metLocation": 24, "metTimeOfDay": 1 },
+    { "species": 25, "level": 18, "heldItem": 163, "moves": [84, 45, 98, 86], "metLevel": 4, "metLocation": 37, "metTimeOfDay": 2 },
+    { "species": 130, "level": 30, "shiny": true, "moves": [44, 82, 43, 56], "metLevel": 30, "metLocation": 52, "metTimeOfDay": 3 }
+  ],
+  "boxes": [
+    { "box": 0, "slot": 0, "species": 175, "isEgg": true, "level": 5, "moves": [45, 204] },
+    { "box": 0, "slot": 1, "species": 201, "form": 16, "level": 20, "moves": [237], "metLevel": 20, "metLocation": 71, "metTimeOfDay": 1 },
+    { "box": 0, "slot": 2, "species": 245, "level": 70, "moves": [61, 240, 62, 54], "ppUps": [3, 3, 3, 0],
+      "dvs": { "atk": 15, "def": 15, "spe": 15, "spc": 15 },
+      "statExp": { "hp": 65535, "atk": 65535, "def": 65535, "spe": 65535, "spc": 65535 } },
+    { "box": 0, "slot": 3, "species": 248, "level": 100, "moves": [44, 242, 157, 89] },
+    { "box": 0, "slot": 4, "species": 152, "level": 5, "moves": [33, 45], "otName": "シルバー", "tid": 22222, "otGender": 0,
+      "metLevel": 5, "metLocation": 24, "metTimeOfDay": 1 }
+  ],
+  "fill": [
+    { "box": 8, "start": 0, "count": 30, "speciesStart": 191, "levelStep": 1, "template": { "level": 5, "moves": [33] } }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "id": "crystal-en",
+  "description": "Pokémon Crystal (international layout, English; Crystal stores player gender and caught data)",
+  "game": "C",
+  "lang": "en",
+  "trainer": { "name": "KRIS", "tid": 34567, "gender": 1, "money": 54321, "playTime": { "h": 40, "m": 41, "s": 42 } },
+  "registerDex": true,
+  "currentBox": 0,
+  "party": [
+    { "species": 158, "level": 14, "nickname": "CHOMPY", "moves": [10, 43, 55, 99], "friendship": 90,
+      "metLevel": 5, "metLocation": 24, "metTimeOfDay": 2 },
+    { "species": 25, "level": 18, "heldItem": 163, "moves": [84, 45, 98, 86], "ppUps": [1, 2, 3, 0],
+      "metLevel": 4, "metLocation": 37, "metTimeOfDay": 1 },
+    { "species": 130, "level": 30, "shiny": true, "moves": [44, 82, 43, 56],
+      "metLevel": 30, "metLocation": 52, "metTimeOfDay": 3 }
+  ],
+  "boxes": [
+    { "box": 0, "slot": 0, "species": 172, "isEgg": true, "level": 5, "moves": [84, 204] },
+    { "box": 0, "slot": 1, "species": 201, "form": 25, "level": 21, "moves": [237], "metLevel": 21, "metLocation": 71, "metTimeOfDay": 1 },
+    { "box": 0, "slot": 2, "species": 245, "level": 70, "moves": [61, 240, 62, 54], "ppUps": [3, 3, 3, 0],
+      "dvs": { "atk": 15, "def": 15, "spe": 15, "spc": 15 },
+      "statExp": { "hp": 65535, "atk": 65535, "def": 65535, "spe": 65535, "spc": 65535 },
+      "metLevel": 40, "metLocation": 70, "metTimeOfDay": 2 },
+    { "box": 0, "slot": 3, "species": 248, "level": 100, "moves": [44, 242, 157, 89], "metLevel": 55, "metLocation": 1, "metTimeOfDay": 3 },
+    { "box": 0, "slot": 4, "species": 152, "level": 5, "moves": [33, 45], "pokerus": { "strain": 3, "days": 1 },
+      "otName": "SILVER", "tid": 11111, "otGender": 0, "heldItem": 173, "metLevel": 5, "metLocation": 24, "metTimeOfDay": 1 }
+  ],
+  "fill": [
+    { "box": 13, "start": 0, "count": 20, "speciesStart": 216, "levelStep": 1, "template": { "level": 10, "moves": [33] } }
+  ]
+}

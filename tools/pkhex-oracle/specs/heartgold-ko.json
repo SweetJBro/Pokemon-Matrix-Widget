@@ -1,0 +1,30 @@
+{
+  "id": "heartgold-ko",
+  "description": "Pokémon HeartGold (Korean: block magic 0x20070903, Korean text).",
+  "game": "HG",
+  "lang": "ko",
+  "trainer": { "name": "히비키", "tid": 24242, "sid": 13131, "gender": 0, "money": 8000, "playTime": { "h": 6, "m": 6, "s": 6 } },
+  "registerDex": true,
+  "currentBox": 0,
+  "party": [
+    { "species": 158, "level": 16, "nickname": "악어", "nature": "Adamant", "gender": "M", "moves": [10, 43, 55, 99],
+      "metLocation": 126, "metLevel": 5, "metDate": "2010-05-01", "ball": 4 },
+    { "species": 25, "level": 20, "heldItem": 236, "moves": [84, 45, 98, 86], "metLocation": 149, "metLevel": 18, "metDate": "2010-05-02", "ball": 4 },
+    { "species": 130, "level": 30, "shiny": true, "gender": "F", "moves": [44, 82, 43, 56], "metLocation": 165, "metLevel": 30, "metDate": "2010-05-03", "ball": 4 }
+  ],
+  "boxes": [
+    { "box": 0, "slot": 0, "species": 175, "isEgg": true, "moves": [45, 204], "eggLocation": 2000, "eggDate": "2010-05-04", "ball": 4 },
+    { "box": 0, "slot": 4, "species": 201, "form": 16, "level": 25, "moves": [237], "metLocation": 209, "metLevel": 25, "metDate": "2010-05-05", "ball": 4 },
+    { "box": 0, "slot": 9, "species": 249, "level": 70, "moves": [177, 219, 16, 105], "ppUps": [3, 3, 3, 3],
+      "ivs": { "hp": 31, "atk": 31, "def": 31, "spa": 31, "spd": 31, "spe": 31 },
+      "evs": { "hp": 255, "atk": 255, "def": 255, "spa": 255, "spd": 255, "spe": 255 },
+      "metLocation": 218, "metLevel": 45, "metDate": "2010-05-06", "ball": 1 },
+    { "box": 0, "slot": 17, "species": 250, "level": 100, "moves": [221, 241, 126, 105], "metLocation": 220, "metLevel": 45, "metDate": "2010-05-07", "ball": 4 },
+    { "box": 17, "slot": 29, "species": 245, "level": 40, "moves": [61, 43, 16, 62], "metLocation": 160, "metLevel": 40, "metDate": "2010-05-08", "ball": 2 }
+  ],
+  "fill": [
+    { "box": 1, "start": 0, "count": 24, "shuffleOrders": true,
+      "species": [176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199],
+      "template": { "level": 12, "moves": [33, 45], "metLocation": 150, "metLevel": 12, "metDate": "2010-05-09" } }
+  ]
+}

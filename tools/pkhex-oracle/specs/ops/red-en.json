@@ -1,0 +1,9 @@
+{
+  "description": "Gen 1 packed-list edits: take Eevee out of box 1 (later entries shift down when PKHeX packs the list), take the party's Pikachu (party shifts), put a Pikachu record into empty box 4, and make box 12 the current box (its list is mirrored into the bank-1 current-box copy).",
+  "ops": [
+    { "op": "deleteBox", "box": 0, "slot": 2 },
+    { "op": "deleteParty", "slot": 1 },
+    { "op": "setBox", "box": 3, "slot": 0, "format": "pk1", "hexFile": "test/fixtures/records/pk1-pikachu-sparky.hex" },
+    { "op": "setCurrentBox", "box": 11 }
+  ]
+}

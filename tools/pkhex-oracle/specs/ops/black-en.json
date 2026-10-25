@@ -1,0 +1,8 @@
+{
+  "description": "Gen 5: clear box 1 slot 10 (Reshiram), take party slot 1, put a Black 2 record into box 24 slot 1.",
+  "ops": [
+    { "op": "deleteBox", "box": 0, "slot": 9 },
+    { "op": "deleteParty", "slot": 0 },
+    { "op": "setBox", "box": 23, "slot": 0, "format": "pk5", "hexFile": "test/fixtures/records/pk5-oshawott-shell.hex" }
+  ]
+}

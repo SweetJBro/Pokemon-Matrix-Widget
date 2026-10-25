@@ -1,0 +1,33 @@
+{
+  "id": "platinum-en",
+  "description": "Pokémon Platinum (international, English). Box 2 holds one Pokémon per PK4 block order.",
+  "game": "Pt",
+  "lang": "en",
+  "trainer": { "name": "DAWN", "tid": 50505, "sid": 60606, "gender": 1, "money": 999999, "playTime": { "h": 120, "m": 1, "s": 2 } },
+  "registerDex": true,
+  "currentBox": 0,
+  "party": [
+    { "species": 393, "level": 16, "nickname": "PIPPY", "nature": "Modest", "gender": "M", "moves": [1, 45, 145, 64],
+      "metLocation": 16, "metLevel": 5, "metDate": "2010-01-02", "ball": 4, "friendship": 160 },
+    { "species": 403, "level": 14, "heldItem": 155, "moves": [33, 43, 268], "metLocation": 17, "metLevel": 4, "metDate": "2010-01-03", "ball": 4, "groundTile": 2 },
+    { "species": 396, "level": 12, "shiny": true, "gender": "F", "moves": [33, 45, 98], "metLocation": 16, "metLevel": 3, "metDate": "2010-01-04", "ball": 4 }
+  ],
+  "boxes": [
+    { "box": 0, "slot": 0, "species": 446, "isEgg": true, "moves": [118, 33], "eggLocation": 2000, "eggDate": "2010-02-01", "ball": 4 },
+    { "box": 0, "slot": 4, "species": 201, "form": 27, "level": 30, "moves": [237], "metLocation": 63, "metLevel": 30, "metDate": "2010-02-02", "ball": 15 },
+    { "box": 0, "slot": 9, "species": 487, "form": 1, "heldItem": 112, "level": 70, "moves": [467, 337, 396, 414], "ppUps": [3, 3, 3, 3],
+      "ivs": { "hp": 31, "atk": 31, "def": 31, "spa": 31, "spd": 31, "spe": 31 },
+      "evs": { "hp": 255, "atk": 255, "def": 255, "spa": 255, "spd": 255, "spe": 255 },
+      "metLocation": 117, "metLevel": 47, "metDate": "2010-02-03", "ball": 1,
+      "ribbons": ["RibbonChampionSinnoh", "RibbonAbility", "RibbonAbilityGreat"] },
+    { "box": 0, "slot": 17, "species": 479, "form": 3, "level": 100, "moves": [403, 85, 109, 86], "metLocation": 70, "metLevel": 20, "metDate": "2010-02-04", "ball": 13 },
+    { "box": 0, "slot": 29, "species": 412, "form": 2, "level": 20, "moves": [182, 33], "language": "fr", "otName": "LÉO", "tid": 300, "sid": 400, "otGender": 0,
+      "metLocation": 30, "metLevel": 20, "metDate": "2010-02-05", "ball": 4, "pokerus": { "strain": 1, "days": 1 } },
+    { "box": 17, "slot": 29, "species": 482, "level": 50, "moves": [93, 248, 129, 253], "metLocation": 87, "metLevel": 50, "metDate": "2010-02-06", "ball": 4 }
+  ],
+  "fill": [
+    { "box": 1, "start": 0, "count": 24, "shuffleOrders": true,
+      "species": [411, 412, 413, 414, 415, 416, 417, 418, 419, 420, 421, 422, 423, 424, 425, 426, 427, 428, 429, 430, 431, 432, 433, 434],
+      "template": { "level": 15, "moves": [33, 45], "metLocation": 18, "metLevel": 15, "metDate": "2010-01-05" } }
+  ]
+}

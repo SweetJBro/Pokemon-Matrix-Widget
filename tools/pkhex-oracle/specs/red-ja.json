@@ -1,0 +1,27 @@
+{
+  "id": "red-ja",
+  "description": "Pokémon Red (Japanese layout: 8 boxes x 30, 6-byte names)",
+  "game": "RD",
+  "lang": "ja",
+  "trainer": { "name": "サトシ", "tid": 31337, "money": 500, "playTime": { "h": 0, "m": 59, "s": 1 } },
+  "gen1": { "starter": 4, "rivalStarter": 7 },
+  "registerDex": true,
+  "currentBox": 0,
+  "party": [
+    { "species": 4, "level": 14, "moves": [10, 45, 52] },
+    { "species": 25, "level": 12, "nickname": "ピカ", "moves": [84, 45, 98] },
+    { "species": 129, "level": 15, "shiny": true, "moves": [150, 33] }
+  ],
+  "boxes": [
+    { "box": 0, "slot": 0, "species": 150, "level": 70, "moves": [94, 105, 133, 112], "ppUps": [3, 3, 3, 3],
+      "dvs": { "atk": 15, "def": 15, "spe": 15, "spc": 15 },
+      "statExp": { "hp": 65535, "atk": 65535, "def": 65535, "spe": 65535, "spc": 65535 } },
+    { "box": 0, "slot": 1, "species": 151, "level": 100, "moves": [1, 144, 118, 94] },
+    { "box": 0, "slot": 2, "species": 92, "level": 20, "nickname": "ゴス", "moves": [122, 95, 101] },
+    { "box": 0, "slot": 3, "species": 54, "level": 22, "moves": [10, 39, 50] },
+    { "box": 0, "slot": 4, "species": 16, "level": 6, "moves": [16], "otName": "シゲル", "tid": 2222 }
+  ],
+  "fill": [
+    { "box": 7, "start": 0, "count": 30, "speciesStart": 40, "levelStep": 1, "template": { "level": 10, "moves": [33] } }
+  ]
+}

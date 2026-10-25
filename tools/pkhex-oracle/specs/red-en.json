@@ -1,0 +1,28 @@
+{
+  "id": "red-en",
+  "description": "Pokémon Red (international layout, English)",
+  "game": "RD",
+  "lang": "en",
+  "trainer": { "name": "RED", "tid": 12345, "money": 3175, "playTime": { "h": 12, "m": 34, "s": 56 } },
+  "gen1": { "starter": 1, "rivalStarter": 7 },
+  "registerDex": true,
+  "currentBox": 0,
+  "party": [
+    { "species": 1, "level": 12, "moves": [33, 45, 73, 22], "dvs": { "atk": 9, "def": 8, "spe": 7, "spc": 6 } },
+    { "species": 25, "level": 15, "nickname": "SPARKY", "moves": [84, 45, 98, 86], "ppUps": [3, 0, 1, 0],
+      "dvs": { "atk": 12, "def": 5, "spe": 14, "spc": 3 }, "statExp": { "hp": 1000, "atk": 2000, "def": 3000, "spe": 4000, "spc": 5000 } },
+    { "species": 130, "level": 20, "shiny": true, "moves": [44, 82, 43, 56] }
+  ],
+  "boxes": [
+    { "box": 0, "slot": 0, "species": 150, "level": 70, "moves": [94, 105, 133, 112], "ppUps": [3, 3, 3, 3],
+      "dvs": { "atk": 15, "def": 15, "spe": 15, "spc": 15 },
+      "statExp": { "hp": 65535, "atk": 65535, "def": 65535, "spe": 65535, "spc": 65535 } },
+    { "box": 0, "slot": 1, "species": 151, "level": 100, "moves": [1, 144, 118, 94] },
+    { "box": 0, "slot": 2, "species": 133, "level": 25, "nickname": "VEE", "moves": [33, 28, 98, 44] },
+    { "box": 0, "slot": 3, "species": 143, "level": 30, "moves": [29, 133, 156, 34] },
+    { "box": 0, "slot": 4, "species": 4, "level": 5, "moves": [10, 45], "otName": "BLUE", "tid": 54321 }
+  ],
+  "fill": [
+    { "box": 11, "start": 0, "count": 20, "speciesStart": 10, "levelStep": 1, "template": { "level": 3, "moves": [33] } }
+  ]
+}

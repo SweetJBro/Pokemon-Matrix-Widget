@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="referrer" content="no-referrer">
+<title>Box Link</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/battle.css">
+<!-- Classic scripts, in this order: the Matrix client sends its capabilities request on the
+     iframe's load event, so the WidgetApi has to be listening before any module runs.
+     All URLs are relative so the page works under a BASE_PATH. -->
+<script src="vendor/matrix-widget-api/api.min.js"></script>
+<script src="js/widget-early.js"></script>
+<script type="module" src="js/app.js"></script>
+</head>
+<body data-phase="boot">
+<div id="app" class="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <span class="brand-text">Box Link</span>
+    </div>
+    <div class="topbar-right">
+      <button type="button" id="presence" class="chip chip-presence" title="People with this widget open in the room" hidden>
+        <span class="presence-dot" aria-hidden="true"></span><span class="presence-count">0</span><span class="presence-label">here</span>
+      </button>
+      <span id="conn" class="conn" data-state="idle" role="status" title="Connection to the game server" hidden>
+        <span class="conn-dot" aria-hidden="true"></span><span class="conn-text">Offline</span>
+      </span>
+      <button type="button" id="user-chip" class="chip chip-user" hidden>
+        <span class="user-avatar"></span><span class="user-name"></span>
+      </button>
+    </div>
+  </header>
+  <nav id="tabs" class="tabs" role="tablist" aria-label="Sections">
+    <a href="#saves" id="tab-saves" data-tab="saves" role="tab"><span class="tab-icon" aria-hidden="true">▤</span><span>Saves</span></a>
+    <a href="#home" id="tab-home" data-tab="home" role="tab"><span class="tab-icon" aria-hidden="true">▦</span><span>Home</span></a>
+    <a href="#trade" id="tab-trade" data-tab="trade" role="tab"><span class="tab-icon" aria-hidden="true">⇄</span><span>Trade</span></a>
+    <a href="#battle" id="tab-battle" data-tab="battle" role="tab"><span class="tab-icon" aria-hidden="true">✦</span><span>Battle</span></a>
+  </nav>
+  <main id="main" class="main">
+    <div class="screen screen-center">
+      <div class="spinner-wrap" role="status"><span class="spinner" aria-hidden="true"></span><span class="spinner-label">Loading…</span></div>
+    </div>
+  </main>
+</div>
+<div id="toasts" class="toasts" aria-live="polite"></div>
+<div id="dialog-root"></div>
+<noscript><p class="noscript">This widget needs JavaScript.</p></noscript>
+</body>
+</html>

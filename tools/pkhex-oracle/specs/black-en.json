@@ -1,0 +1,36 @@
+{
+  "id": "black-en",
+  "description": "Pokémon Black (international, English). Box 2 holds one Pokémon per PK5 block order (((PID >> 13) & 31) % 24 = slot).",
+  "game": "B",
+  "lang": "en",
+  "trainer": { "name": "HILBERT", "tid": 56789, "sid": 6789, "gender": 0, "money": 654321, "playTime": { "h": 50, "m": 51, "s": 52 } },
+  "registerDex": true,
+  "currentBox": 0,
+  "party": [
+    { "species": 495, "level": 15, "nickname": "VINE", "nature": "Modest", "gender": "M", "abilityNumber": 2, "moves": [33, 43, 22, 35], "ppUps": [1, 1, 1, 1],
+      "metLocation": 4, "metLevel": 5, "metDate": "2011-03-06", "ball": 4, "friendship": 75, "markings": 42,
+      "ivs": { "hp": 31, "atk": 30, "def": 29, "spa": 28, "spd": 27, "spe": 26 }, "evs": { "spa": 252, "spe": 252, "hp": 6 } },
+    { "species": 25, "level": 20, "heldItem": 236, "moves": [84, 45, 98, 86], "metLocation": 32, "metLevel": 18, "metDate": "2011-03-07", "ball": 4 },
+    { "species": 610, "level": 25, "shiny": true, "gender": "F", "nature": "Jolly", "moves": [10, 43, 82, 44], "metLocation": 56, "metLevel": 20, "metDate": "2011-03-08", "ball": 3 }
+  ],
+  "boxes": [
+    { "box": 0, "slot": 0, "species": 636, "isEgg": true, "moves": [52, 81], "eggLocation": 60002, "eggDate": "2011-03-09", "ball": 4 },
+    { "box": 0, "slot": 4, "species": 201, "form": 16, "level": 30, "moves": [237], "metLocation": 30001, "metLevel": 30, "metDate": "2011-03-10", "metVersion": "Pt", "ball": 4 },
+    { "box": 0, "slot": 9, "species": 643, "level": 70, "moves": [551, 225, 337, 394], "ppUps": [3, 3, 3, 3],
+      "ivs": { "hp": 31, "atk": 31, "def": 31, "spa": 31, "spd": 31, "spe": 31 },
+      "evs": { "hp": 255, "atk": 255, "def": 255, "spa": 255, "spd": 255, "spe": 255 },
+      "metLocation": 101, "metLevel": 50, "metDate": "2011-03-11", "ball": 1, "ribbons": ["RibbonLegend", "RibbonChampionWorld"] },
+    { "box": 0, "slot": 17, "species": 612, "level": 100, "moves": [337, 200, 89, 14], "metLocation": 60, "metLevel": 40, "metDate": "2011-03-12", "ball": 4,
+      "pokerus": { "strain": 4, "days": 2 } },
+    { "box": 0, "slot": 22, "species": 509, "level": 18, "nSparkle": true, "moves": [10, 43, 252], "otName": "N", "tid": 1, "sid": 2, "otGender": 0,
+      "metLocation": 30003, "metLevel": 18, "metDate": "2011-03-13", "ball": 4 },
+    { "box": 0, "slot": 29, "species": 550, "form": 1, "level": 25, "moves": [33, 55, 29], "language": "it", "otName": "GIULIA", "tid": 900, "sid": 901, "otGender": 1,
+      "metLocation": 30003, "metLevel": 25, "metDate": "2011-03-14", "metVersion": "W", "ball": 4 },
+    { "box": 23, "slot": 29, "species": 644, "level": 50, "moves": [550, 225, 337, 85], "metLocation": 101, "metLevel": 50, "metDate": "2011-03-15", "ball": 2 }
+  ],
+  "fill": [
+    { "box": 1, "start": 0, "count": 24, "shuffleOrders": true,
+      "species": [494, 495, 496, 497, 498, 499, 500, 501, 502, 503, 504, 505, 506, 507, 508, 509, 510, 511, 512, 513, 514, 515, 516, 517],
+      "template": { "level": 10, "moves": [33, 45], "metLocation": 32, "metLevel": 10, "metDate": "2011-03-16" } }
+  ]
+}
