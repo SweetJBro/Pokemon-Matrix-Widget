@@ -33,6 +33,6 @@ export function teamChoices(serverSources = ["random"]) {
 /** Resolve the chosen source into a team spec (null when the player backed out). */
 export async function pickTeam(app, id, options) {
   const p = pickers.get(id);
-  if (!p) throw new Error("That team source is not available yet");
+  if (!p) throw new Error("That team source is not available on this server");
   return p.pick(app, options);
 }
