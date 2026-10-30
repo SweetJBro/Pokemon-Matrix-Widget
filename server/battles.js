@@ -425,7 +425,8 @@ function createBattles({ db, config, hub }) {
     return null;
   });
 
-  hub.on("battle.list", (msg, conn) => {
+  hub.on("battle.list", async (msg, conn) => {
+    await loadExtraSources();   // so `sources` already lists "home" and "party" before anyone has battled
     const roomId = checkRoom(conn, msg.roomId);
     const me = conn.user.id;
     const mine = [...challenges.values()].filter((c) => c.from.id === me || c.to.id === me).map(challengeView);

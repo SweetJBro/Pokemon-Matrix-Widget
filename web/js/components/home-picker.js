@@ -1,12 +1,12 @@
 /* Choose Pokémon from Home inside a dialog: one Home box at a time, Pokémon that can't be
    chosen dimmed with the reason as their tooltip/toast.
 
-     const ids = await pickFromHome({ data, base, title, allow(m) -> null | reason, multiple, preselect, note })
+     const ids = await pickFromHome({ data, base, title, allow(m) -> null | reason, multiple, max, preselect, note })
      -> array of chosen ids, or null if cancelled */
 import { h, clear, dialog, toast } from "../ui.js";
 import { boxGrid, boxFrame } from "./box-grid.js";
 
-export async function pickFromHome({ data, base, title = "Choose from Home", allow = () => null, multiple = false, preselect = [], note = null, confirmLabel = "Choose" }) {
+export async function pickFromHome({ data, base, title = "Choose from Home", allow = () => null, multiple = false, max = Infinity, preselect = [], note = null, confirmLabel = "Choose" }) {
   const chosen = new Set(preselect);
   let box = Math.max(0, data.boxes.findIndex((b) => b.mons.some((m) => chosen.has(m.id) || !allow(m))));
   const holder = h("div");
@@ -27,11 +27,15 @@ export async function pickFromHome({ data, base, title = "Choose from Home", all
         if (!c) return;
         if (c.why) { toast(c.why, "warn"); return; }
         if (chosen.has(c.id)) chosen.delete(c.id);
-        else { if (!multiple) chosen.clear(); chosen.add(c.id); }
+        else {
+          if (!multiple) chosen.clear();
+          else if (chosen.size >= max) { toast(`You can choose at most ${max}.`, "warn"); return; }
+          chosen.add(c.id);
+        }
         draw();
       } }),
     }));
-    hint.textContent = `${chosen.size} chosen.${elsewhere ? ` ${elsewhere} more you can choose in other boxes.` : ""}`;
+    hint.textContent = `${chosen.size}${Number.isFinite(max) ? " of " + max : ""} chosen.${elsewhere ? ` ${elsewhere} more you can choose in other boxes.` : ""}`;
   };
   draw();
   const ok = await dialog({

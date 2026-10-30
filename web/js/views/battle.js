@@ -12,6 +12,7 @@ import { renderLobby } from "../battle/lobby.js";
 import { challengeDialog, acceptDialog } from "../battle/challenge.js";
 import { BattleClient } from "../battle/client.js";
 import { createBattleScreen } from "../battle/screen.js";
+import "../battle/real-teams.js";   // registers the "From Home" and "From a save" team pickers
 
 const OPTIONS_KEY = "pmw.battle.options";
 let teardown = null;
