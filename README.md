@@ -128,3 +128,4 @@ The code is MIT licensed ([LICENSE](LICENSE)). It includes:
 
 Pokémon and all related names are trademarks of Nintendo, Creatures Inc. and GAME FREAK inc. This is a fan
 project, not affiliated with or endorsed by them. It ships no game data: players bring their own saves.
+Vibecoded by JBro:dewrito.net
