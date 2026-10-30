@@ -253,15 +253,20 @@ with `code: "conversion"`), and the browser puts the returned record into the op
 GET  /api/trades?roomId=            -> { open: [Trade], mine: [Trade] }   (open = offers in that room anyone may answer)
 POST /api/trades                    { roomId, to: userId | null, offerMonId, wanted: { species?, note? } } -> Trade
 POST /api/trades/:id/answer         { monId }        counter-offer (sets to_user for open offers); resets both confirmations
-POST /api/trades/:id/confirm                         when both sides have confirmed the server swaps owners in one transaction
+POST /api/trades/:id/confirm       { fromMon, toMon } the two Pokémon the player saw; 409 if the deal changed. When both
+                                    sides have confirmed, the server swaps owners in one transaction
 POST /api/trades/:id/cancel                          either side; unlocks both Pokémon
 Trade = { id, roomId, status: open|answered|done|cancelled, from: { user, mon: summary }, to: { user, mon: summary } | null,
           wanted, fromOk, toOk, createdAt, updatedAt, result?: { evolved: [{ side, from, to }] } }
 ```
 
 WebSocket pushes `{ type: "trade", trade }` to both parties (and to the room for open offers).
-On completion each received Pokémon goes to the receiver's first free Home slot, and the trade
-evolution of the record's own generation is applied (`tradeEvolve`). Battle team sources `home`
+On completion each received Pokémon takes the Home slot the receiver's own Pokémon left (so a
+full Home can still trade), gets what receiving a trade does in its generation and trade-evolves
+by that generation's rules (`shared/pkm/evolve.js`: `receiveTrade`, `tradeEvolve`, `applyTrade`;
+no moves are learned and FR/LG's National Dex gate is not applied). Each side of a Trade also
+carries `mon.evolves: { to, blockedBy } | null`, the preview of what the trade will do. Unfinished
+offers expire after 7 days. Battle team sources `home`
 (`{ monIds }`, owned by the user) and `party` (`{ records: [{ record, meta }] }`, parsed for that
 battle only) are registered by `server/battle-teams.js` through `registerTeamSource`.
 
