@@ -12,7 +12,8 @@
     "start": "node server/index.js",
     "dev": "DEV_AUTH=1 HOST=127.0.0.1 node --watch server/index.js",
     "test": "node --test --test-timeout=180000 test/",
-    "build-data": "node scripts/build-data.mjs"
+    "build-data": "node scripts/build-data.mjs",
+    "fuzz": "node tools/fuzz/fuzz.mjs"
   },
   "dependencies": {
     "@pkmn/randoms": "0.10.11",
