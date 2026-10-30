@@ -12,6 +12,11 @@ import { renderLobby } from "../battle/lobby.js";
 import { challengeDialog, acceptDialog } from "../battle/challenge.js";
 import { BattleClient } from "../battle/client.js";
 import { createBattleScreen } from "../battle/screen.js";
+import "../battle/real-teams.js";
+import { announce } from "../announce.js";
+
+/** "Gen 2 single" / "Gen 4 double": the battle kind as it reads in a chat message. */
+const shortDesc = (o) => `Gen ${o?.gen ?? "?"} ${o?.gameType === "doubles" ? "double" : "single"}`;   // registers the "From Home" and "From a save" team pickers
 
 const OPTIONS_KEY = "pmw.battle.options";
 let teardown = null;
@@ -35,7 +40,7 @@ export function mount(el, app) {
 
   const people = () => {
     const seen = new Map();
-    for (const u of app.presence()) seen.set(u.id, { id: u.id, name: app.nameOf(u.id) });
+    for (const u of app.presence()) seen.set(u.id, { id: u.id, name: app.nameOf(u.id), activity: u.activity ?? null, battleId: u.battleId ?? null });
     return [...seen.values()];
   };
   const isVisible = () => !el.hidden && globalThis.document?.visibilityState !== "hidden";
@@ -85,6 +90,7 @@ export function mount(el, app) {
       const { challenge: c } = await app.ws.request("battle.challenge", { to: r.to, roomId: app.roomId, options: r.options, team: r.team });
       upsert(data.challenges, c, true);
       toast(`Challenge sent to ${c.to.name}`, "ok");
+      announce(app, "challenge", { id: c.id, to: c.to.name, desc: shortDesc(c.options) });
       renderLobbyIfShown();
     } catch (e) { toast(e.message, "error"); }
   }
@@ -170,6 +176,11 @@ export function mount(el, app) {
   }));
 
   offs.push(app.ws.on("battle", ({ battle: b }) => {
+    // The challenger (p1) announces how a battle in the room ended; practice battles stay quiet.
+    if (b.status === "done" && !b.practice && b.players.p1.id === me) {
+      const w = b.winner, l = w === "p1" ? "p2" : "p1";
+      announce(app, "battle-result", { id: b.id, desc: shortDesc(b.options), winner: w ? b.players[w].name : null, loser: w ? b.players[l].name : null, p1: b.players.p1.name, p2: b.players.p2.name });
+    }
     const live = b.status === "active";
     upsert(data.battles, b, live);
     if (!live && (b.roomId === app.roomId)) { upsert(data.recent, b, true); data.recent.splice(10); }

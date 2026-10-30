@@ -21,6 +21,9 @@
                              served at /sprites/ when set
    HOME_BOXES                number of Home boxes per user (default 40)
    SESSION_HOURS             bearer token lifetime (default 24; the widget silently re-runs OpenID after that)
+   API_REQUESTS_PER_MINUTE   API requests per client address per minute (default 600)
+   WS_MESSAGES_PER_SECOND    WebSocket messages per connection per second (default 10, bursts of WS_BURST, default 40)
+   WS_PER_USER / WS_PER_IP / WS_TOTAL   open WebSocket limits (default 10 / 40 / 5000)
    MATRIX_FEDERATION_OVERRIDES  tests only: "example.org=http://127.0.0.1:9000/fake,..." skips discovery for those names */
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -31,6 +34,8 @@ export const ROOT = path.resolve(here, "..");
 /** PokeAPI/sprites commit the development default and scripts/fetch-sprites.sh both pin. */
 export const SPRITES_COMMIT = "97a7832d307311c0e1c6ea9035308bf80cc94f81";
 const DEV_SPRITE_BASE = `https://raw.githubusercontent.com/PokeAPI/sprites/${SPRITES_COMMIT}/sprites/pokemon/`;
+
+const num = (v, d) => (v !== undefined && v !== "" && Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : d);
 
 export function loadConfig(env = process.env) {
   let basePath = env.BASE_PATH || "/";
@@ -56,6 +61,11 @@ export function loadConfig(env = process.env) {
     homeBoxes: Math.max(1, Math.min(200, Number(env.HOME_BOXES || 40))),
     sessionHours: Number(env.SESSION_HOURS || 24),
     federationOverrides: null,
+    apiPerMinute: num(env.API_REQUESTS_PER_MINUTE, 600),
+    ws: {
+      perSecond: num(env.WS_MESSAGES_PER_SECOND, 10), burst: num(env.WS_BURST, 40),
+      perUser: num(env.WS_PER_USER, 10), perIp: num(env.WS_PER_IP, 40), total: num(env.WS_TOTAL, 5000),
+    },
   };
   if (env.MATRIX_FEDERATION_OVERRIDES) {
     if (env.NODE_ENV === "production") throw new Error("MATRIX_FEDERATION_OVERRIDES is for tests and refuses to run with NODE_ENV=production");

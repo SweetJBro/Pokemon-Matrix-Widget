@@ -16,8 +16,8 @@ const pickers = new Map([
 
 export const TEAM_SOURCES = [
   { id: "random" },
-  { id: "home", label: "From Home", hint: "Pokémon from your Home boxes (coming soon)" },
-  { id: "party", label: "From a save", hint: "The party of a save you opened (coming soon)" },
+  { id: "home", label: "From Home", hint: "Pokémon from your Home boxes" },
+  { id: "party", label: "From a save", hint: "Pokémon from a save you opened" },
 ];
 
 export function registerTeamPicker(id, picker) { pickers.set(id, picker); }

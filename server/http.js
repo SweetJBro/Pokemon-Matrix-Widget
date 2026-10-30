@@ -6,13 +6,24 @@
    A returned value is sent as 200 JSON (undefined -> 204). Throw HttpError for anything else.
    opts.auth defaults to true: the request must carry "Authorization: Bearer <session token>". */
 
+import zlib from "node:zlib";
+
 export class HttpError extends Error {
   constructor(status, message, extra) { super(message); this.status = status; this.extra = extra; }
 }
 
-export function sendJson(res, status, obj, headers = {}) {
-  const body = JSON.stringify(obj);
-  res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...headers });
+/** JSON response; bodies over 8 KiB are compressed when the client accepts it (a full Home listing
+    is ~460 KiB of JSON and ~10x smaller compressed, which matters on phones). Pass req to allow it. */
+export function sendJson(res, status, obj, headers = {}, req = null) {
+  let body = Buffer.from(JSON.stringify(obj));
+  const h = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", vary: "accept-encoding", ...headers };
+  const accept = String(req?.headers["accept-encoding"] || "");
+  if (body.length > 8192) {
+    if (/\bbr\b/.test(accept)) { body = zlib.brotliCompressSync(body, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 4 } }); h["content-encoding"] = "br"; }
+    else if (/\bgzip\b/.test(accept)) { body = zlib.gzipSync(body, { level: 6 }); h["content-encoding"] = "gzip"; }
+  }
+  h["content-length"] = body.length;
+  res.writeHead(status, h);
   res.end(body);
 }
 

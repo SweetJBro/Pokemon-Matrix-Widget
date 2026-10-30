@@ -23,7 +23,7 @@ function battleLine(b, me, actions) {
 }
 
 /**
- * data: { me, people: [{ id, name }], challenges: [Challenge], battles: [Summary], recent: [Summary], loading, error }
+ * data: { me, people: [{ id, name, activity?, battleId? }], challenges: [Challenge], battles: [Summary], recent: [Summary], loading, error }
  * on: { practice(), challenge(personId?), accept(c), decline(c), cancel(c), open(battleId) }
  */
 export function renderLobby(data, on) {
@@ -61,6 +61,8 @@ export function renderLobby(data, on) {
         const pending = outgoing.some((c) => c.to.id === p.id);
         return h("li", { class: "person" }, avatar(p.name, p.id, "sm"),
           h("span", { class: "person-text" }, h("span", { class: "person-name" }, p.name), h("span", { class: "person-id" }, p.id)),
+          p.activity === "battling" ? badge("Battling", "accent") : null,
+          p.battleId ? btn("Watch", () => on.open(p.battleId), "ghost") : null,
           btn(pending ? "Challenged" : "Challenge", () => on.challenge(p.id), pending ? "ghost" : "", { disabled: pending }));
       }))
       : h("p", { class: "muted small" }, "Nobody else has the widget open in this room. Ask someone to open it, or practice against the CPU.")),
