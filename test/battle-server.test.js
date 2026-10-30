@@ -31,7 +31,8 @@ let app, base;
 const tokens = {};
 
 async function startServer(env = {}) {
-  const s = createServer(loadConfig({ DB_FILE: ":memory:", PORT: "0", HOST: "127.0.0.1", DEV_AUTH: "1", ...env }));
+  // These clients play whole battles at machine speed, far past the per-connection message limit for people.
+  const s = createServer(loadConfig({ DB_FILE: ":memory:", PORT: "0", HOST: "127.0.0.1", DEV_AUTH: "1", WS_MESSAGES_PER_SECOND: "10000", WS_BURST: "10000", ...env }));
   const a = await s.listen();
   return { s, base: `http://127.0.0.1:${a.port}/` };
 }

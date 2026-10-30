@@ -214,6 +214,12 @@ repository (package size limit).
 * Storage: `node:sqlite`. Home Pokémon are stored as records plus a cached `MonView`; the server
   re-parses and validates every record it receives.
 * REST for Home and trades, one WebSocket per widget for presence, trade updates and battles.
+* Limits (server/config.js documents the variables): API requests per client address per minute;
+  WebSocket connections per user, per address and in total, messages per connection (token
+  bucket), message size (64 KiB) and unsent backlog (1 MiB); request and header timeouts;
+  per-user limits in Home (120 changes a minute, 30 Pokémon a deposit), trades (20 open offers)
+  and battles. The widget page is served with a Content-Security-Policy that allows scripts
+  from this origin only.
 
 ### Home API (`server/home.js`)
 

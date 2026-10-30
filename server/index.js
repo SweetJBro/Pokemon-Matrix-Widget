@@ -8,7 +8,7 @@ import { loadConfig, publicConfig, ROOT } from "./config.js";
 import { openDb } from "./db.js";
 import { createAuth } from "./auth.js";
 import { createHub } from "./hub.js";
-import { Router, HttpError, sendJson, readJson } from "./http.js";
+import { Router, HttpError, sendJson, readJson, RateLimiter } from "./http.js";
 import * as home from "./home.js";
 import * as trades from "./trades.js";
 import * as battles from "./battles.js";
@@ -28,6 +28,13 @@ export function createServer(config = loadConfig()) {
   const auth = createAuth({ db, config });
   const app = new Router();
   const server = http.createServer((req, res) => handle(req, res).catch((e) => fail(res, e)));
+  // Requests and their headers must arrive promptly (slow-request floods hold sockets otherwise).
+  server.headersTimeout = 15_000;
+  server.requestTimeout = 30_000;
+  server.keepAliveTimeout = 5_000;
+  const apiLimit = new RateLimiter(config.apiPerMinute, 60_000);
+  const clientIp = (req) => (config.trustProxy && req.headers["x-forwarded-for"]?.split(",").pop().trim()) || req.socket.remoteAddress;
+  const csp = pageCsp(config);
   const hub = createHub({ server, auth, config });
   const deps = { db, config, auth, hub };
 
@@ -54,6 +61,7 @@ export function createServer(config = loadConfig()) {
     if (p === "/config.json") return sendJson(res, 200, publicConfig(config));
 
     if (p.startsWith("/api/")) {
+      apiLimit.check(clientIp(req));
       const m = app.match(req.method, p);
       if (!m) throw new HttpError(404, "No such endpoint");
       if (m.methodMismatch) throw new HttpError(405, "Method not allowed");
@@ -64,7 +72,7 @@ export function createServer(config = loadConfig()) {
         req, res, url, params: m.params, query: url.searchParams, body, user, ...deps,
         // Only a reverse proxy we run (TRUST_PROXY=1) may set the client address; otherwise
         // anyone could spoof X-Forwarded-For past the per-IP rate limits.
-        ip: (config.trustProxy && req.headers["x-forwarded-for"]?.split(",").pop().trim()) || req.socket.remoteAddress,
+        ip: clientIp(req),
       };
       const result = await m.route.handler(ctx);
       if (res.headersSent) return;
@@ -103,7 +111,8 @@ export function createServer(config = loadConfig()) {
         "cache-control": root.cache || "no-cache",
         // Matrix clients iframe this page; frame-ancestors is deliberately open, no X-Frame-Options.
         // CSP3 "*" only matches http(s), so Element Desktop's vector://vector needs its own entry.
-        "content-security-policy": "frame-ancestors * vector:",
+        // The app's pages also get a strict policy (pageCsp); the dev harness has inline scripts.
+        "content-security-policy": f.endsWith(".html") && !rel.startsWith("dev/") ? csp : "frame-ancestors * vector:",
         "x-content-type-options": "nosniff",
         "referrer-policy": "no-referrer",
       };
@@ -119,6 +128,20 @@ export function createServer(config = loadConfig()) {
     listen() { return new Promise((r) => server.listen(config.port, config.host, () => r(server.address()))); },
     async close() { hub.close(); battles.shutdown?.(deps); await new Promise((r) => server.close(r)); db.close(); },
   };
+}
+
+/** Content-Security-Policy for the widget page. Scripts only from this origin (no inline script,
+    no eval): player-controlled text such as nicknames and Matrix display names can never become
+    code even if an escaping bug slipped in. Inline style attributes are allowed (HP bars, avatar
+    hues); images may also come from the sprite host. */
+function pageCsp(config) {
+  let sprites = "";
+  try { const u = new URL(config.spriteBase); if (/^https?:$/.test(u.protocol)) sprites = " " + u.origin; } catch { /* relative: same origin */ }
+  return [
+    "default-src 'self'", "script-src 'self'", "style-src 'self' 'unsafe-inline'",
+    `img-src 'self' data: blob:${sprites}`, "connect-src 'self' ws: wss:", "font-src 'self'",
+    "object-src 'none'", "base-uri 'none'", "form-action 'self'", "frame-ancestors * vector:",
+  ].join("; ");
 }
 
 if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith("server/index.js")) {
