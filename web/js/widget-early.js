@@ -87,7 +87,27 @@
     api.once("ready", function () { early.ready = true; resolve(); });
   });
 
+  // Someone who turned on room announcements (js/announce.js) gets that permission asked for in the
+  // first handshake too, so it survives a reload. The flag is only a hint about what to ask for.
+  try {
+    for (var k = 0; k < localStorage.length; k++) {
+      var key = localStorage.key(k);
+      if (key && key.indexOf("pmw.announce.") === 0 && localStorage.getItem(key) === "1") {
+        CAPABILITIES.push("org.matrix.msc2762.send.event:m.room.message#m.notice");
+        break;
+      }
+    }
+  } catch (e) { /* storage blocked: ask later */ }
+  early.capabilities = CAPABILITIES.slice();
   api.requestCapabilities(CAPABILITIES);
+
+  // matrix-widget-api 1.20 stores approved capabilities only from the FIRST notify_capabilities;
+  // after a renegotiation (MSC2974) the client's new approval would be acknowledged and forgotten,
+  // and hasCapability() would stay false. Keep the latest approval ourselves; the library replies.
+  api.on("action:notify_capabilities", function (ev) {
+    var approved = ev.detail && ev.detail.data && ev.detail.data.approved;
+    if (Array.isArray(approved)) api.approvedCapabilities = approved;
+  });
 
   function bufferAction(kind) {
     api.on("action:" + kind, function (ev) {

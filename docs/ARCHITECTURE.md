@@ -133,12 +133,17 @@ Text codecs (`shared/text/genN.js`): `decode(bytes, lang) -> string`, `encode(st
 `index.js`:
 
 ```js
-export function openSave(bytes, filename)  // -> SaveFile; throws FormatError with a user-facing message
-export async function exportSave(save)     // -> Uint8Array with the container restored
+export async function openSave(bytes, filename)  // -> SaveFile; throws FormatError with a user-facing message
+export function exportSave(save, mode = "same")  // -> Uint8Array; "same" restores the container, "plain" is the raw image
 ```
 
-`exportSave` is async because the Nintendo Switch Online Game Boy container stores a SHA-1 of
-the payload (WebCrypto is async). `container.js` strips and remembers emulator trailers and
+`openSave` is async because RetroArch-compressed (RZIP) saves are inflated with
+DecompressionStream; `exportSave` is synchronous (the Switch Online SHA-1 uses a synchronous
+implementation in shared/bytes.js). The returned SaveFile also has `container`, `filename`, a
+`readOnly` reason that merges the container's and the game's, and `warnings`; every writing
+method throws that reason when it is set. `shared/pkm/index.js` gives the record codecs one door:
+`codecFor(format)`, `readRecord(record, meta)`, `checkRecord(record, meta)` (the strict gate the
+server uses) and `identity(view)`. `container.js` strips and remembers emulator trailers and
 headers (MBC3 RTC footers, DeSmuME `.dsv` footer, NSO `SRAM` header, short or zero-filled PC-port
 files) so `exportSave` restores them unchanged. A save from a PC port with its own non-cartridge
 format (Gen1Recomp's Lua-table save) is refused with a message that names the port.
@@ -168,12 +173,13 @@ All mutations happen on an in-memory copy; nothing is written until `serialize()
 ## Conversions: `shared/pkm/convert.js`, `evolve.js`, `showdown.js`
 
 ```js
-convert(record, meta, toFormat, { allowUnofficial, target: { game, lang }, now })
+convert(record, meta, toFormat, { allowUnofficial, dropItem, target: { game, lang }, now })
                                       // -> { record, meta, notes: [], provenance: { from, to, rule, at } }; throws FormatError if impossible
 canConvert(meta, toFormat, { allowUnofficial, target })   // -> { ok, reason }
 tradeEvolve(record, meta, { partnerSpecies })             // -> { record, meta, from, to, notes } | null
 toShowdownSet(view, mechanicsGen, opts)                   // -> PokemonSet | throws FormatError if not representable
 defaultName(species, gen, lang)                           // the name the game gives an un-nicknamed Pokémon
+toFile(record, meta)                                      // shared/pkm/files.js: { bytes, filename } of a .pk1-.pk5 PKHeX opens
 ```
 
 Official paths: pk1 <-> pk2 (Time Capsule), pk3 -> pk4 (Pal Park), pk4 -> pk5 (Poké Transfer).
@@ -209,6 +215,14 @@ repository (package size limit).
 * Storage: `node:sqlite`. Home Pokémon are stored as records plus a cached `MonView`; the server
   re-parses and validates every record it receives.
 * REST for Home and trades, one WebSocket per widget for presence, trade updates and battles.
+  JSON bodies over 8 KiB are sent brotli/gzip-compressed (a full 1,200-Pokémon Home listing is
+  ~460 KiB raw, ~27 KiB compressed; the server answers it in ~6 ms).
+* Limits (server/config.js documents the variables): API requests per client address per minute;
+  WebSocket connections per user, per address and in total, messages per connection (token
+  bucket), message size (64 KiB) and unsent backlog (1 MiB); request and header timeouts;
+  per-user limits in Home (120 changes a minute, 30 Pokémon a deposit), trades (20 open offers)
+  and battles. The widget page is served with a Content-Security-Policy that allows scripts
+  from this origin only.
 
 ### Home API (`server/home.js`)
 
@@ -219,17 +233,41 @@ and a record whose fingerprint (sha256 of format + record) is already stored in 
 ```
 GET  /api/home                      -> { boxes: [{ index, name, mons: [{ id, slot, format, game, lang, summary, locked }] }], boxCount, boxSlots: 30 }
 GET  /api/home/mon/:id              -> { id, box, slot, format, lang, game, record, view, provenance: [], depositedAt, depositedBy, locked }
+GET  /api/home/mon/:id/showdown     -> { gen, format, text, notes }   (Showdown set for its own generation; 409 for Eggs)
 POST /api/home/deposit              { mons: [{ record, meta, box?, slot? }] } -> { stored: [{ id, box, slot }], warnings: [] }   (all or nothing)
 POST /api/home/move                 { id, box, slot }   (swaps with whatever is there)
 PUT  /api/home/box/:index           { name }
-POST /api/home/withdraw/preview     { id, target: { format, game, lang }, allowUnofficial } -> { record, meta, view, notes, provenance }
-POST /api/home/withdraw             { id, target, allowUnofficial } -> { record, meta, view, notes }   (removes it from Home; history keeps a copy)
+POST /api/home/withdraw/preview     { id, target: { format, game, lang } } -> { ok, code?, reason?, view, notes, locked }
+POST /api/home/withdraw             { id, target } -> { id, record, meta, view, notes }   (locks it as "withdrawing")
+POST /api/home/withdraw/:id/commit                    the record is in the save: it leaves Home (history keeps a copy)
+POST /api/home/withdraw/:id/cancel                    putting it into the save failed or was abandoned: unlock
 POST /api/home/release              { id }
 GET  /api/home/history?limit=50     -> { entries: [{ at, action, monId, detail }] }
 ```
 
+`GET /api/home` also returns `pendingWithdrawals: [{ id, target, createdAt }]`, so a withdrawal
+whose tab closed half-way can be finished or cancelled later; a Pokémon is never in neither
+place. Each listed Pokémon carries `flags` from its provenance (`deposit`, `seen-before`, ...).
+Save files can be copied, so cloning cannot be prevented; the server keeps a ledger of each
+individual Pokémon's identity and marks a deposit "seen-before" when the same Pokémon is in
+another player's Home or left another player's Home earlier.
+
 A Pokémon locked by an open trade cannot be moved, withdrawn or released. Withdrawal converts
-lazily (`convert`), and the browser puts the returned record into the open save with `putInBox`.
+lazily (`convert`): `withdraw` and `withdraw/preview` take `allowUnofficial` and `dropItem`, and answer
+409 with `code` (`conversion`, `unofficial`, `hm`, `item`, `egg`, ...) and a reason the player can act on.
+The preview returns the converted view, the notes and `rules` (`time-capsule`, `pal-park`,
+`poke-transfer`, `vc-model-v1`). The browser puts the returned record into the open save with
+`putInBox` (which enforces the target game's own limits), registers it in the save's Pokédex, and
+commits. On commit the converted Pokémon's new identity goes into the ledger, so one converted
+unofficially carries an `unofficial` flag whenever it is deposited again.
+
+### Showroom (`server/showroom.js`, `web/showroom.html`)
+
+An opt-in, read-only link to chosen Home boxes that anyone can open without signing in:
+`showroom.html#<token>` (the token stays in the fragment, out of request lines and logs).
+`GET/POST /api/showroom` (owner: `{ enabled, token, boxes }`), `POST /api/showroom/rotate` (new
+token; the old link stops working), `GET /api/showroom/view/:token` (public: box names and
+Pokémon summaries with OT names, no trainer IDs, records, locks or trades; 404 when off).
 
 ### Trade API (`server/trades.js`)
 
@@ -237,15 +275,20 @@ lazily (`convert`), and the browser puts the returned record into the open save 
 GET  /api/trades?roomId=            -> { open: [Trade], mine: [Trade] }   (open = offers in that room anyone may answer)
 POST /api/trades                    { roomId, to: userId | null, offerMonId, wanted: { species?, note? } } -> Trade
 POST /api/trades/:id/answer         { monId }        counter-offer (sets to_user for open offers); resets both confirmations
-POST /api/trades/:id/confirm                         when both sides have confirmed the server swaps owners in one transaction
+POST /api/trades/:id/confirm       { fromMon, toMon } the two Pokémon the player saw; 409 if the deal changed. When both
+                                    sides have confirmed, the server swaps owners in one transaction
 POST /api/trades/:id/cancel                          either side; unlocks both Pokémon
 Trade = { id, roomId, status: open|answered|done|cancelled, from: { user, mon: summary }, to: { user, mon: summary } | null,
           wanted, fromOk, toOk, createdAt, updatedAt, result?: { evolved: [{ side, from, to }] } }
 ```
 
 WebSocket pushes `{ type: "trade", trade }` to both parties (and to the room for open offers).
-On completion each received Pokémon goes to the receiver's first free Home slot, and the trade
-evolution of the record's own generation is applied (`tradeEvolve`). Battle team sources `home`
+On completion each received Pokémon takes the Home slot the receiver's own Pokémon left (so a
+full Home can still trade), gets what receiving a trade does in its generation and trade-evolves
+by that generation's rules (`shared/pkm/evolve.js`: `receiveTrade`, `tradeEvolve`, `applyTrade`;
+no moves are learned and FR/LG's National Dex gate is not applied). Each side of a Trade also
+carries `mon.evolves: { to, blockedBy } | null`, the preview of what the trade will do. Unfinished
+offers expire after 7 days. Battle team sources `home`
 (`{ monIds }`, owned by the user) and `party` (`{ records: [{ record, meta }] }`, parsed for that
 battle only) are registered by `server/battle-teams.js` through `registerTeamSource`.
 
@@ -268,5 +311,20 @@ listening; then `js/app.js` as a module.
   widget iframe is partitioned or ephemeral, so IndexedDB is best-effort and the UI always offers
   the download. Downloads use a Blob `<a download>` from a click.
 * `js/views/{saves,home,trade,battle}.js`: one module per tab, each `export function mount(el, app)`.
+  Views stay thin and build their layout from:
+  * `js/components/`: `box-grid.js` (`boxGrid`, `boxFrame`: save boxes, Home boxes, pickers),
+    `mon-card.js` (detail card with stats, moves and provenance), `mon-sprite.js`, `filters.js`.
+  * `js/saves/session.js`: deposit and two-phase withdraw between a store entry and Home, with
+    no DOM (tested in Node against the real server).
+  * `js/home/state.js`: the cached `GET /api/home`, refreshed on `{ type: "home" }` pushes.
+* `js/announce.js`: opt-in room announcements (account dialog). Turning it on asks the Matrix
+  client for `org.matrix.msc2762.send.event:m.room.message#m.notice` through capability
+  renegotiation (MSC2974); later loads ask for it in the first handshake. Only the widget that
+  acted posts (offerer, last confirmer, challenger), so each event is announced once.
+* Presence: each widget reports its visible tab (`{ type: "activity", tab }`); the hub's presence
+  entries carry `activity` (`battling` from the battle module, else `trading`, `home`, `saves`,
+  `battle-lobby`) and `battleId`, shown in the presence dialog and the battle lobby (Watch).
+* `web/shared` is a symlink to `../shared` so Node resolves the browser's `../../shared/...`
+  imports the same way the server's URL layout does (`/shared/` beside `/js/`).
 * `web/dev/fake-matrix.html`: two widgets (Alice, Bob) under a fake client that answers
   capabilities, `get_openid` (two-phase), `update_state` and room events; run with `DEV_AUTH=1`.

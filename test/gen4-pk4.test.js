@@ -214,8 +214,8 @@ test("prepareForBox applies what storing in each game's PC does (§10.3, §16)",
   assert.deepEqual([inPt.fields.form, inPt.fields.heldItem, inPt.notes], [1, 112, []]);
   assert.equal(toHex(P.build(inPt.fields)), toHex(P.build(giratina)), "nothing to change for Platinum");
   const inDP = P.prepareForBox(giratina, "D");
-  assert.deepEqual([inDP.fields.form, inDP.fields.heldItem], [0, 0]);
-  assert.equal(inDP.notes.length, 2);
+  assert.deepEqual([inDP.fields.form, inDP.fields.heldItem, inDP.fields.ability], [0, 0, 46], "Altered Forme has Pressure");
+  assert.equal(inDP.notes.length, 3, "orb removed, form reverted, ability recomputed");
   const noOrb = P.prepareForBox({ ...giratina, heldItem: 0 }, "HG");
   assert.equal(noOrb.fields.form, 0);
   assert.equal(giratina.form, 1, "the input is not changed");

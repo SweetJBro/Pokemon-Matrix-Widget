@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "pokemon-widget",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["server/index.js"],
+      "env": { "DEV_AUTH": "1", "HOST": "127.0.0.1", "PORT": "8091" },
+      "port": 8091
+    }
+  ]
+}
