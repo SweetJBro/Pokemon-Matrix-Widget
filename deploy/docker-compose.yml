@@ -1,0 +1,32 @@
+# Production layout: Caddy terminates TLS for WIDGET_HOST and proxies to the widget.
+#   cp .env.example .env    (fill it in)
+#   cd deploy && docker compose --env-file ../.env up -d --build   (Compose reads ${...} from --env-file)
+services:
+  widget:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        FETCH_SPRITES: ${FETCH_SPRITES:-1}
+    env_file: ../.env
+    environment:
+      PUBLIC_URL: https://${WIDGET_HOST}/
+      TRUST_PROXY: "1"          # Caddy is the only thing in front of it
+    volumes:
+      - widget_data:/data
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports: ["80:80", "443:443"]
+    environment:
+      WIDGET_HOST: ${WIDGET_HOST}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on: [widget]
+    restart: unless-stopped
+
+volumes:
+  widget_data:
+  caddy_data:

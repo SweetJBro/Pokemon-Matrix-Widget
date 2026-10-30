@@ -24,7 +24,7 @@ function teamField(sources, name = "team") {
     h("legend", { class: "field-label" }, "Your team"),
     choices.map((c, i) => h("label", { class: ["bt-radio", !c.enabled && "is-disabled"], title: c.hint ?? "" },
       h("input", { type: "radio", name, value: c.id, checked: i === 0, disabled: !c.enabled }),
-      h("span", null, c.label, c.enabled ? null : h("small", { class: "muted" }, " · coming soon")))));
+      h("span", null, c.label, c.enabled ? null : h("small", { class: "muted" }, " · not on this server")))));
 }
 
 const fmtTimer = (s) => (s ? (s >= 60 ? `${s / 60} min` : `${s} s`) + " per turn" : "Off");

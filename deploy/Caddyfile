@@ -1,0 +1,4 @@
+{$WIDGET_HOST} {
+    encode zstd gzip
+    reverse_proxy widget:8090
+}
