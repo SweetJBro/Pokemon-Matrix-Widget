@@ -135,3 +135,12 @@
   .trade-sides { grid-template-columns: minmax(0, 1fr); }
   .trade-arrow { justify-self: center; transform: rotate(90deg); }
 }
+.cell-unofficial {
+  position: absolute; right: 3px; bottom: 2px; padding: 0 3px; border-radius: 3px;
+  font-size: 0.55rem; font-weight: 900; background: var(--danger); color: #fff;
+}
+.convert-list li { align-items: flex-start; }
+.convert-list .help-list { margin-top: 4px; font-size: 0.85rem; }
+/* A consent sentence wraps; the short filter toggles above stay on one line. */
+.check.banner, .dialog .check { white-space: normal; align-items: flex-start; gap: 8px; }
+.check.banner input, .dialog .check input { margin-top: 3px; flex: none; }

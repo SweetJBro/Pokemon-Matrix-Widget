@@ -48,7 +48,7 @@ export async function deposit({ api, store, entryId, picks, homeBox = null }) {
 }
 
 /** -> { done: [{ id, view, box, index }], failed: [{ id, error }] } */
-export async function withdraw({ api, store, entryId, monIds, targetBox = null }) {
+export async function withdraw({ api, store, entryId, monIds, targetBox = null, allowUnofficial = false, dropItem = false }) {
   const entry = store.get(entryId);
   if (!entry) throw new Error("That save is no longer open.");
   const save = await openEntry(entry);
@@ -57,11 +57,15 @@ export async function withdraw({ api, store, entryId, monIds, targetBox = null }
   const done = [], failed = [];
   for (const id of monIds) {
     let got;
-    try { got = await api.post("api/home/withdraw", { id, target }); }
+    try { got = await api.post("api/home/withdraw", { id, target, allowUnofficial, dropItem }); }
     catch (e) { failed.push({ id, error: e.message }); continue; }
     try {
       const at = save.putInBox(fromBase64(got.record), got.meta, targetBox ?? undefined);
-      done.push({ id, view: got.view, box: at.box, index: at.index });
+      // Received Pokémon are registered as seen and caught, as the games do on a trade or transfer.
+      const v = got.view;
+      try { save.registerDex(v.species, { form: v.form, gender: v.gender, shiny: v.shiny, pid: v.pid, lang: v.lang, isEgg: v.isEgg }); }
+      catch { /* a Pokédex the save module can't update is not a reason to lose the withdrawal */ }
+      done.push({ id, view: got.view, notes: got.notes || [], box: at.box, index: at.index });
     } catch (e) {
       failed.push({ id, error: e.message, view: got.view });
       await api.post(`api/home/withdraw/${encodeURIComponent(id)}/cancel`).catch(() => {});

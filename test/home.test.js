@@ -143,3 +143,31 @@ test("a full Home refuses more", async () => {
   assert.equal(total, all.length);
   assert.equal((await red.post("/api/home/deposit", { mons: [] })).status, 400);
 });
+
+test("unofficial Gen 1/2 -> Gen 3 needs the server flag and consent, and the result is badged for good", async () => {
+  const srv = createServer(loadConfig({ DB_FILE: ":memory:", PORT: "0", HOST: "127.0.0.1", DEV_AUTH: "1", UNOFFICIAL_TRANSFERS: "1" }));
+  const b = `http://127.0.0.1:${(await srv.listen()).port}`;
+  try {
+    const { token } = await fetch(b + "/api/auth/dev", { method: "POST", body: JSON.stringify({ userId: "@oak:example.org" }) }).then((x) => x.json());
+    const call = (p, body) => fetch(b + p, { method: body === undefined ? "GET" : "POST", body: body && JSON.stringify(body), headers: { authorization: "Bearer " + token } }).then(async (x) => ({ status: x.status, json: x.status === 204 ? null : await x.json() }));
+    const red = await loadSave("red-en.sav");
+    const [entry] = takeAll(red, 1);
+    const id = (await call("/api/home/deposit", { mons: [entry] })).json.stored[0].id;
+    const target = { format: "pk3", game: "E", lang: "en" };
+    const pre = await call("/api/home/withdraw/preview", { id, target });
+    assert.equal(pre.json.code, "unofficial");
+    assert.equal((await call("/api/home/withdraw", { id, target })).status, 409, "no consent");
+    const ok = await call("/api/home/withdraw/preview", { id, target, allowUnofficial: true });
+    assert.deepEqual([ok.json.ok, ok.json.unofficial, ok.json.rules], [true, true, ["vc-model-v1"]]);
+    const w = (await call("/api/home/withdraw", { id, target, allowUnofficial: true })).json;
+    assert.equal(w.meta.format, "pk3");
+    const em = await loadSave("emerald-en.sav");
+    em.putInBox(fromBase64(w.record), w.meta);
+    assert.equal((await call(`/api/home/withdraw/${id}/commit`, {})).status, 204);
+    // The converted Gen 3 Pokémon comes back later: it carries the unofficial badge.
+    const again = await call("/api/home/deposit", { mons: [{ record: w.record, meta: w.meta }] });
+    assert.equal(again.status, 200);
+    const listed = (await call("/api/home")).json.boxes[0].mons[0];
+    assert.ok(listed.flags.includes("unofficial"), JSON.stringify(listed.flags));
+  } finally { await srv.close(); }
+});

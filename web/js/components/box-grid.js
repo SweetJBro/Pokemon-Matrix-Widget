@@ -24,7 +24,7 @@ export function boxGrid({ cells, base, onPick, pickEmpty = true, onDrop, label =
       cell?.flags?.includes("seen-before") && "is-flagged"].filter(Boolean).join(" ");
     const btn = h("button", {
       type: "button", class: cls, role: "gridcell",
-      "aria-label": `${label(i)}: ${name}${cell?.locked ? " (" + cell.locked + ")" : ""}`,
+      "aria-label": `${label(i)}: ${name}${cell?.flags?.includes("unofficial") ? ", unofficially converted" : ""}${cell?.locked ? " (" + cell.locked + ")" : ""}`,
       "aria-pressed": cell?.selected ? "true" : "false",
       title: v ? name + (cell?.locked ? ` — ${cell.locked}` : "") : "",
       disabled: !v && !pickEmpty,
@@ -32,7 +32,8 @@ export function boxGrid({ cells, base, onPick, pickEmpty = true, onDrop, label =
     v && monSprite(v, base),
     v && !v.isEgg && h("span", { class: "cell-level" }, String(v.level)),
     v?.shiny && h("span", { class: "cell-shiny", "aria-hidden": "true" }, "★"),
-    v?.heldItem && h("span", { class: "cell-item", "aria-hidden": "true" }, "●"));
+    v?.heldItem && h("span", { class: "cell-item", "aria-hidden": "true" }, "●"),
+    cell?.flags?.includes("unofficial") && h("span", { class: "cell-unofficial", title: "Unofficially converted from Gen 1/2" }, "U"));
     if (onPick) btn.addEventListener("click", () => onPick(i, cell));
     if (onDrop) {
       if (v && !cell.locked) {

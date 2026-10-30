@@ -30,7 +30,7 @@ export function monCard(view, { base, provenance, locked, flags = [], actions = 
     fact("Nature", view.nature), fact("Ability", view.ability), fact("Item", view.heldItem),
     fact("Ball", view.ball), fact("Friendship", view.friendship),
     fact("Met", view.met ? [view.met.locationName, view.met.level ? `Lv. ${view.met.level}` : null, view.met.date].filter(Boolean).join(" · ") || null : null),
-    fact("Pokérus", view.pokerus ? (view.pokerus.days ? "Infected" : "Cured") : null));
+    fact("Pokérus", view.pokerus?.strain ? (view.pokerus.days ? "Infected" : "Cured") : null));   // strain 0 = never had it
   const moves = view.moves?.length ? h("ul", { class: "mon-moves" }, view.moves.map((m) =>
     h("li", { class: "mon-move" },
       m.type && h("span", { class: `type type-${typeClass(m.type)} type-mini` }, m.type),

@@ -15,6 +15,7 @@ import { monCard } from "../components/mon-card.js";
 import { genLabel, monSprite } from "../components/mon-sprite.js";
 import { homeState } from "../home/state.js";
 import { deposit, withdraw, openEntry, describe } from "../saves/session.js";
+import { canConvert } from "../../shared/pkm/convert.js";
 
 const PARTY = -1;
 
@@ -234,7 +235,8 @@ export async function mount(el, app) {
       const b = data.boxes[hbox];
       const cells = Array.from({ length: data.boxSlots }, () => null);
       for (const m of b.mons) {
-        const fits = m.format === format;
+        const can = canConvert({ format: m.format }, format, { allowUnofficial: !!app.config.unofficialTransfers });
+        const fits = can.ok;
         cells[m.slot] = { view: { ...m.summary, gen: Number(m.format.slice(2)) }, selected: chosen.has(m.id), dim: !fits || !!m.locked, locked: m.locked, flags: m.flags, id: m.id, fits };
       }
       const other = data.boxes.reduce((n, x, i) => n + (i === hbox ? 0 : x.mons.filter((m) => m.format === format && !m.locked).length), 0);
@@ -244,7 +246,7 @@ export async function mount(el, app) {
           onPrev: () => { hbox = (hbox + data.boxes.length - 1) % data.boxes.length; draw(); },
           onNext: () => { hbox = (hbox + 1) % data.boxes.length; draw(); },
           grid: boxGrid({ cells, base, pickEmpty: false, onPick: (i, c) => {
-            if (!c?.fits) { toast(c ? `That is a ${genLabel(c.view.format)} Pokémon; this save holds ${genLabel(format)} Pokémon.` : "", "warn"); return; }
+            if (!c?.fits) { toast(c ? canConvert({ format: c.view.format }, format, { allowUnofficial: !!app.config.unofficialTransfers }).reason : "", "warn"); return; }
             if (c.locked) { toast(`Can't withdraw it: ${c.locked}.`, "warn"); return; }
             chosen.has(c.id) ? chosen.delete(c.id) : chosen.add(c.id); draw();
           } }),
@@ -255,13 +257,15 @@ export async function mount(el, app) {
     const ok = await dialog({
       title: `Withdraw into ${s.gameName}`, wide: true,
       body: h("div", null, holder, h("label", { class: "field" }, h("span", { class: "field-label" }, "Put them in"), targetSel),
-        h("p", { class: "field-hint" }, "Each Pokémon stays in Home until it is safely in this save. Moving Pokémon between generations is not available yet.")),
+        h("p", { class: "field-hint" }, "Each Pokémon stays in Home until it is safely in this save. Pokémon from another generation are converted the way the games do it (Time Capsule, Pal Park, Poké Transfer); you'll see what changes before anything moves.")),
       buttons: [{ label: "Cancel", value: false, kind: "ghost" }, { label: "Withdraw", value: true, kind: "primary" }],
     });
     if (!ok || !chosen.size) return;
+    const flags = await reviewConversions([...chosen], { format, game: s.game, lang: s.lang });
+    if (!flags) return;
     st.busy = true; render();
     try {
-      const res = await withdraw({ api: app.api, store, entryId: st.activeId, monIds: [...chosen], targetBox: targetSel.value === "" ? null : Number(targetSel.value) });
+      const res = await withdraw({ api: app.api, store, entryId: st.activeId, monIds: [...chosen], targetBox: targetSel.value === "" ? null : Number(targetSel.value), ...flags });
       await reopen();
       home.refresh().catch(() => {});
       if (res.done.length && targetSel.value !== "") st.box = Number(targetSel.value);
@@ -271,6 +275,37 @@ export async function mount(el, app) {
     } catch (e) {
       toast(`Nothing was moved: ${e.message}`, "error", { timeout: 10000 });
     } finally { st.busy = false; render(); }
+  }
+
+  /** For Pokémon that need converting: show what each conversion does and ask for the consents it needs.
+      -> { allowUnofficial, dropItem } or null if the player backed out. Same-format withdrawals skip this. */
+  async function reviewConversions(ids, target) {
+    const previews = await Promise.all(ids.map((id) => app.api.post("api/home/withdraw/preview", { id, target, allowUnofficial: true, dropItem: true }).then((p) => ({ id, p }), (e) => ({ id, error: e.message }))));
+    const converting = previews.filter((x) => x.p && x.p.rules?.length);
+    if (!converting.length) return { allowUnofficial: false, dropItem: false };
+    const unofficial = converting.some((x) => x.p.unofficial);
+    const loseItem = converting.some((x) => x.p.notes.some((n) => /held item was lost/.test(n)));
+    const RULE = { "time-capsule": "Time Capsule", "pal-park": "Pal Park", "poke-transfer": "Poké Transfer", "vc-model-v1": "unofficial conversion" };
+    const allowBox = h("input", { type: "checkbox" }), itemBox = h("input", { type: "checkbox" });
+    const ok = await dialog({
+      title: `Convert ${plural(converting.length, "Pokémon", "Pokémon")} for ${st.save.gameName}?`, wide: true,
+      body: h("div", null,
+        h("ul", { class: "mini-list convert-list" }, converting.map(({ p }) => h("li", null,
+          monSprite(p.view, base, { className: "mini-sprite" }),
+          h("div", null,
+            h("strong", null, `${p.view.isNicknamed ? p.view.nickname + " · " : ""}${p.view.speciesName} Lv. ${p.view.level}`),
+            " ", badge(p.rules.map((r) => RULE[r] || r).join(" → "), p.unofficial ? "danger" : "muted"),
+            p.ok ? h("ul", { class: "help-list" }, p.notes.map((n) => h("li", null, n))) : h("p", { class: "field-error" }, p.reason))))),
+        unofficial && h("label", { class: "check banner banner-danger" }, allowBox,
+          " Allow the unofficial conversion. No game can move Gen 1/2 Pokémon to Gen 3 or later; these Pokémon get a permanent \"unofficial\" mark."),
+        loseItem && h("label", { class: "check" }, itemBox, " Their held items may be lost in the conversion."),
+        h("p", { class: "field-hint" }, "Home keeps the original until the converted Pokémon is safely in this save.")),
+      buttons: [{ label: "Cancel", value: false, kind: "ghost" }, { label: "Convert and withdraw", value: true, kind: "primary" }],
+    });
+    if (!ok) return null;
+    if (unofficial && !allowBox.checked) { toast("Tick the box to allow the unofficial conversion, or leave those Pokémon in Home.", "warn"); return null; }
+    if (loseItem && !itemBox.checked) { toast("Take the held items off first, or tick the box to let them be lost.", "warn"); return null; }
+    return { allowUnofficial: unofficial && allowBox.checked, dropItem: loseItem && itemBox.checked };
   }
 
   async function afterChange(message) {

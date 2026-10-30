@@ -18,7 +18,9 @@
 import crypto from "node:crypto";
 import { HttpError, RateLimiter } from "./http.js";
 import { acceptRecord, toBase64 } from "./records.js";
-import { readRecord } from "../shared/pkm/index.js";
+import { readRecord, identity } from "../shared/pkm/index.js";
+import { convert, canConvert } from "../shared/pkm/convert.js";
+import { FormatError } from "../shared/bytes.js";
 
 export const BOX_SLOTS = 30;
 const MAX_DEPOSIT = 30;
@@ -47,6 +49,8 @@ function migrate(db) {
   if (!cols.has("identity")) db.raw.exec("ALTER TABLE home_mons ADD COLUMN identity TEXT");
   if (!cols.has("provenance")) db.raw.exec("ALTER TABLE home_mons ADD COLUMN provenance TEXT NOT NULL DEFAULT '[]'");
   db.raw.exec(SCHEMA);
+  const wcols = new Set(db.all("PRAGMA table_info(home_withdrawals)").map((c) => c.name));
+  if (!wcols.has("result")) db.raw.exec("ALTER TABLE home_withdrawals ADD COLUMN result TEXT");   // JSON { identity, provenance }
 }
 
 const newId = () => crypto.randomBytes(9).toString("base64url");
@@ -90,7 +94,7 @@ export function register(app, deps) {
   function seenBefore(identity, userId) {
     const elsewhere = db.get("SELECT owner FROM home_mons WHERE identity = ? AND owner != ? LIMIT 1", identity, userId);
     if (elsewhere) return "The same Pokémon is in another player's Home right now";
-    const left = db.get("SELECT user_id, at FROM home_ledger WHERE identity = ? AND event IN ('withdraw', 'trade-out') AND user_id != ? ORDER BY at DESC LIMIT 1", identity, userId);
+    const left = db.get("SELECT user_id, at FROM home_ledger WHERE identity = ? AND event IN ('withdraw', 'trade-out', 'converted-out', 'unofficial-out') AND user_id != ? ORDER BY at DESC LIMIT 1", identity, userId);
     if (left) return "The same Pokémon left another player's Home before";
     return null;
   }
@@ -153,6 +157,8 @@ export function register(app, deps) {
         taken.add(pos);
         const id = newId(), now = Date.now();
         const provenance = [{ rule: "deposit", at: now, by: uid, game: a.meta.game }];
+        if (db.get("SELECT 1 FROM home_ledger WHERE identity = ? AND event = 'unofficial-out' LIMIT 1", a.identity))
+          provenance.push({ rule: "unofficial", at: now, note: "Converted from Gen 1/2 by this server's unofficial transfer; no game can do this." });
         const seen = seenBefore(a.identity, uid);
         if (seen) { provenance.push({ rule: "seen-before", at: now, note: seen }); warnings.push(`${a.summary.speciesName}: ${seen}.`); }
         db.run(`INSERT INTO home_mons (id, owner, box, slot, format, lang, game, record, view, fingerprint, deposited_by, deposited_at, identity, provenance)
@@ -203,39 +209,51 @@ export function register(app, deps) {
     notify(ctx.user.id, "box");
   });
 
-  /** Can this Pokémon go into a save of `target`? Same format only until conversions land. */
-  function withdrawCheck(row, target) {
-    if (!target || typeof target.format !== "string") throw new HttpError(400, "Say which save it goes into (target.format)");
-    if (target.format !== row.format) {
-      return { ok: false, code: "conversion", reason: `This is a ${formatLabel(row.format)} Pokémon and the save is ${formatLabel(target.format)}. Moving Pokémon between generations is not available yet.` };
+  /** The record that would go into a save of `target`, converted when the formats differ (shared/pkm/convert.js).
+      -> { ok, code?, reason?, record?, meta?, notes, provenance, unofficial } */
+  function prepareWithdrawal(row, body) {
+    const target = body.target;
+    if (!target || typeof target.format !== "string" || !/^pk[1-5]$/.test(target.format)) throw new HttpError(400, "Say which save it goes into (target.format)");
+    const clean = { format: target.format, game: target.game == null ? null : String(target.game).slice(0, 8), lang: target.lang == null ? null : String(target.lang).slice(0, 4) };
+    const meta = { format: row.format, lang: row.lang, game: row.game };
+    const record = new Uint8Array(row.record);
+    if (clean.format === row.format) return { ok: true, record, meta, notes: [], provenance: [], unofficial: false, target: clean };
+    const allowUnofficial = !!(config.unofficialTransfers && body.allowUnofficial);
+    const can = canConvert(meta, clean.format, { allowUnofficial: !!config.unofficialTransfers });
+    if (!can.ok) return { ok: false, code: "conversion", reason: can.unofficial ? "No game can move Gen 1/2 Pokémon to Gen 3 or later, and this server does not do unofficial conversions." : can.reason, notes: [], unofficial: can.unofficial, target: clean };
+    if (can.unofficial && !allowUnofficial) return { ok: false, code: "unofficial", reason: "This needs an unofficial conversion. Tick the box to allow it.", notes: [], unofficial: true, target: clean };
+    try {
+      const out = convert(record, meta, clean.format, { allowUnofficial, dropItem: !!body.dropItem, target: { game: clean.game, lang: clean.lang ?? row.lang }, now: new Date() });
+      return { ok: true, record: out.record, meta: out.meta, notes: out.notes, provenance: out.provenance, unofficial: can.unofficial, target: clean };
+    } catch (e) {
+      if (!(e instanceof FormatError)) throw e;
+      return { ok: false, code: e.detail?.code || "conversion", reason: e.message, notes: [], unofficial: can.unofficial, target: clean };
     }
-    return { ok: true };
   }
 
   app.post("/api/home/withdraw/preview", (ctx) => {
     const r = getMon(ctx.user.id, ctx.body.id);
-    const check = withdrawCheck(r, ctx.body.target);
-    const { view } = readRecord(new Uint8Array(r.record), { format: r.format, lang: r.lang, game: r.game });
-    return { ...check, view, notes: [], locked: r.locked_by ? lockReason(r) : null };
+    const p = prepareWithdrawal(r, ctx.body);
+    const view = readRecord(p.ok ? p.record : new Uint8Array(r.record), p.ok ? p.meta : { format: r.format, lang: r.lang, game: r.game }).view;
+    return { ok: p.ok, code: p.code, reason: p.reason, view, notes: p.notes, unofficial: p.unofficial, rules: (p.provenance || []).map((x) => x.rule), locked: r.locked_by ? lockReason(r) : null };
   });
 
   app.post("/api/home/withdraw", (ctx) => {
     const uid = ctx.user.id;
     limiter.check(uid);
-    const target = ctx.body.target;
-    const r = db.tx(() => {
+    const out = db.tx(() => {
       const row = getMon(uid, ctx.body.id);
-      const check = withdrawCheck(row, target);
-      if (!check.ok) throw new HttpError(409, check.reason, { code: check.code });
+      const p = prepareWithdrawal(row, ctx.body);
+      if (!p.ok) throw new HttpError(409, p.reason, { code: p.code });
       requireUnlocked(row);
+      const view = readRecord(p.record, p.meta).view;
       db.run("UPDATE home_mons SET locked_by = 'withdraw' WHERE id = ?", row.id);
-      db.run("INSERT INTO home_withdrawals (mon_id, user_id, target, created_at) VALUES (?, ?, ?, ?)", row.id, uid,
-        JSON.stringify({ format: String(target.format), game: target.game == null ? null : String(target.game).slice(0, 8), lang: target.lang == null ? null : String(target.lang).slice(0, 4) }), Date.now());
-      return row;
+      db.run("INSERT INTO home_withdrawals (mon_id, user_id, target, created_at, result) VALUES (?, ?, ?, ?, ?)", row.id, uid,
+        JSON.stringify(p.target), Date.now(), JSON.stringify({ identity: identity(view), provenance: p.provenance }));
+      return { id: row.id, record: toBase64(p.record), meta: p.meta, view, notes: p.notes };
     });
     notify(uid, "withdraw-start");
-    const meta = { format: r.format, lang: r.lang, game: r.game };
-    return { id: r.id, record: toBase64(new Uint8Array(r.record)), meta, view: readRecord(new Uint8Array(r.record), meta).view, notes: [] };
+    return out;
   });
 
   function pendingRow(uid, id) {
@@ -247,13 +265,20 @@ export function register(app, deps) {
   app.post("/api/home/withdraw/:id/commit", (ctx) => {
     const uid = ctx.user.id;
     db.tx(() => {
-      pendingRow(uid, ctx.params.id);
+      const w = pendingRow(uid, ctx.params.id);
       const r = getMon(uid, ctx.params.id);
+      const res = JSON.parse(w.result || "null");
       db.run("DELETE FROM home_withdrawals WHERE mon_id = ?", r.id);
       db.run("DELETE FROM home_mons WHERE id = ?", r.id);
       ledger(r.identity, uid, "withdraw", r.id);
+      // A converted Pokémon has a new identity (a Gen 3 PID); remember it, and whether the conversion was
+      // unofficial, so it is recognised and badged if it is ever deposited again.
+      if (res?.provenance?.length) {
+        const unofficial = res.provenance.some((p) => p.rule === "vc-model-v1");
+        ledger(res.identity, uid, unofficial ? "unofficial-out" : "converted-out", r.id);
+      }
       // History keeps the record, so a player who loses the save afterwards can be helped by hand.
-      log(uid, "withdraw", r.id, { species: JSON.parse(r.view).species, format: r.format, record: toBase64(new Uint8Array(r.record)) });
+      log(uid, "withdraw", r.id, { species: JSON.parse(r.view).species, format: r.format, record: toBase64(new Uint8Array(r.record)), conversions: res?.provenance ?? [] });
     });
     notify(uid, "withdraw");
   });

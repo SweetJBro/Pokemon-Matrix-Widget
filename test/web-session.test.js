@@ -79,18 +79,36 @@ test("a failed deposit leaves the save as it was", async () => {
   assert.equal(hex(store.get(p.id).working), hex(bytes("emerald-en.sav")));
 });
 
-test("withdrawing into the wrong generation leaves the Pokémon in Home, unlocked", async () => {
+test("a Gen 5 Pokémon can't go into a Gen 4 save; it stays in Home, unlocked", async () => {
   const api = await apiFor("@brock:example.org");
   const store = memStore();
+  const bw = await store.add(bytes("black-en.sav"), "b.sav");
+  await deposit({ api, store, entryId: bw.id, picks: [{ box: 0, index: 9 }] });
+  const id = (await api.get("api/home")).boxes[0].mons[0].id;
   const pt = await store.add(bytes("platinum-en.sav"), "pt.sav");
-  await deposit({ api, store, entryId: pt.id, picks: [{ box: 0, index: 0 }] });
+  const before = hex(store.get(pt.id).working);
+  const r = await withdraw({ api, store, entryId: pt.id, monIds: [id] });
+  assert.equal(r.done.length, 0);
+  assert.match(r.failed[0].error, /older generation/);
+  assert.equal(hex(store.get(pt.id).working), before);
+  assert.equal((await api.get("api/home")).boxes[0].mons[0].locked, null);
+});
+
+test("a Gen 4 Pokémon withdrawn into a Gen 5 save goes through Poké Transfer", async () => {
+  const api = await apiFor("@dawn:example.org");
+  const store = memStore();
+  const pt = await store.add(bytes("platinum-en.sav"), "pt.sav");
+  const src = await openEntry(store.get(pt.id));
+  const i = src.box(0).findIndex((e) => e && !e.view.isEgg && !e.view.heldItem && !e.view.moves.some((m) => [15, 19, 57, 70, 432, 249, 127, 431].includes(m.id)));
+  const species = src.box(0)[i].view.species;
+  await deposit({ api, store, entryId: pt.id, picks: [{ box: 0, index: i }] });
   const id = (await api.get("api/home")).boxes[0].mons[0].id;
   const bw = await store.add(bytes("black-en.sav"), "b.sav");
-  const before = hex(store.get(bw.id).working);
-  const r = await withdraw({ api, store, entryId: bw.id, monIds: [id] });
-  assert.equal(r.done.length, 0);
-  assert.match(r.failed[0].error, /between generations is not available/);
-  assert.equal(hex(store.get(bw.id).working), before);
-  const m = (await api.get("api/home")).boxes[0].mons[0];
-  assert.equal(m.locked, null);
+  const r = await withdraw({ api, store, entryId: bw.id, monIds: [id], targetBox: 5 });
+  assert.equal(r.failed.length, 0, JSON.stringify(r.failed));
+  const after = await openEntry(store.get(bw.id));
+  const got = after.box(r.done[0].box)[r.done[0].index].view;
+  assert.deepEqual([got.format, got.species, got.met.location], ["pk5", species, 30001]);
+  const hist = await api.get("api/home/history");
+  assert.equal(hist.entries[0].detail.conversions[0].rule, "poke-transfer");
 });

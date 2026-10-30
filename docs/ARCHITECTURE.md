@@ -173,7 +173,7 @@ All mutations happen on an in-memory copy; nothing is written until `serialize()
 ## Conversions: `shared/pkm/convert.js`, `evolve.js`, `showdown.js`
 
 ```js
-convert(record, meta, toFormat, { allowUnofficial, target: { game, lang }, now })
+convert(record, meta, toFormat, { allowUnofficial, dropItem, target: { game, lang }, now })
                                       // -> { record, meta, notes: [], provenance: { from, to, rule, at } }; throws FormatError if impossible
 canConvert(meta, toFormat, { allowUnofficial, target })   // -> { ok, reason }
 tradeEvolve(record, meta, { partnerSpecies })             // -> { record, meta, from, to, notes } | null
@@ -243,9 +243,13 @@ individual Pokémon's identity and marks a deposit "seen-before" when the same P
 another player's Home or left another player's Home earlier.
 
 A Pokémon locked by an open trade cannot be moved, withdrawn or released. Withdrawal converts
-lazily (`convert`; until it exists only same-format withdrawals are allowed and others answer 409
-with `code: "conversion"`), and the browser puts the returned record into the open save with
-`putInBox` (which enforces the target game's own limits) before committing.
+lazily (`convert`): `withdraw` and `withdraw/preview` take `allowUnofficial` and `dropItem`, and answer
+409 with `code` (`conversion`, `unofficial`, `hm`, `item`, `egg`, ...) and a reason the player can act on.
+The preview returns the converted view, the notes and `rules` (`time-capsule`, `pal-park`,
+`poke-transfer`, `vc-model-v1`). The browser puts the returned record into the open save with
+`putInBox` (which enforces the target game's own limits), registers it in the save's Pokédex, and
+commits. On commit the converted Pokémon's new identity goes into the ledger, so one converted
+unofficially carries an `unofficial` flag whenever it is deposited again.
 
 ### Trade API (`server/trades.js`)
 
