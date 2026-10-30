@@ -1,3 +1,5 @@
+# GitHub Actions workflow, kept here until the push token has the "workflow" scope.
+# To enable: move this file to .github/workflows/test.yml.
 name: test
 on:
   push:
