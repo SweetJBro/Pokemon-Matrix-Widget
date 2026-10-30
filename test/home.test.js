@@ -171,3 +171,18 @@ test("unofficial Gen 1/2 -> Gen 3 needs the server flag and consent, and the res
     assert.ok(listed.flags.includes("unofficial"), JSON.stringify(listed.flags));
   } finally { await srv.close(); }
 });
+
+test("a Home Pokémon exports as a Showdown set; Eggs can't", async () => {
+  const ash = await login("@showdown:example.org");
+  const save = await loadSave("crystal-en.sav");
+  const entries = save.box(0).map((e, i) => [e, i]).filter(([e]) => e).map(([e]) => ({ record: toBase64(e.record), meta: e.meta, view: e.view }));
+  const { json } = await ash.post("/api/home/deposit", { mons: entries.map(({ record, meta }) => ({ record, meta })) });
+  const byName = new Map(entries.map((e, i) => [e.view.isEgg ? "Egg" : e.view.speciesName, json.stored[i].id]));
+  const sui = await ash.get(`/api/home/mon/${byName.get("Suicune")}/showdown`);
+  assert.equal(sui.status, 200);
+  assert.match(sui.json.text, /^Suicune/);
+  assert.match(sui.json.text, /Level: 70/);
+  assert.match(sui.json.text, /^- Bubble Beam/m, "moves by name");
+  assert.equal(sui.json.format, "gen2");
+  assert.equal((await ash.get(`/api/home/mon/${byName.get("Egg")}/showdown`)).status, 409);
+});

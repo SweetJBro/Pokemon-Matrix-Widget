@@ -15,6 +15,9 @@ import { monCard } from "../components/mon-card.js";
 import { genLabel } from "../components/mon-sprite.js";
 import { filterBar, matchesFilter, isFiltering, EMPTY_FILTER } from "../components/filters.js";
 import { homeState } from "../home/state.js";
+import { toFile } from "../../shared/pkm/files.js";
+import { fromBase64 } from "../../shared/bytes.js";
+import { copyText, fmtBytes } from "../ui.js";
 
 export async function mount(el, app) {
   const home = homeState(app);
@@ -62,6 +65,7 @@ export async function mount(el, app) {
         action: { label: "Open a save", onClick: () => app.go("saves") },
       })),
       h("div", { class: "row home-head" }, h("h2", { class: "home-title" }, `Home · ${plural(total, "Pokémon", "Pokémon")}`), jump),
+      total ? statsPanel(d) : null,
       bar,
       st.moving && h("div", { class: "banner" }, "Choose where it goes: click a slot in any box (switch boxes with ‹ ›). ",
         h("button", { type: "button", class: "btn btn-sm btn-ghost", onclick: () => { st.moving = null; render(); } }, "Cancel")),
@@ -69,6 +73,23 @@ export async function mount(el, app) {
         h("button", { type: "button", class: "btn btn-sm btn-ghost", onclick: () => { st.box = i; render(); } }, `${d.boxes[i].name} (${n})`))) : null,
       h("div", { class: "split" }, h("div", null, frame), focus ? detailCard(focus) : h("div", { class: "card mon-card mon-card-hint" },
         h("p", { class: "field-hint" }, total ? "Click a Pokémon to see it. Drag it onto another slot to move it." : "Deposited Pokémon appear here."))));
+  }
+
+  /** Counts at a glance: per generation, shinies, eggs, species, and the most common ones. */
+  function statsPanel(d) {
+    const all = d.boxes.flatMap((b) => b.mons);
+    const byGen = [1, 2, 3, 4, 5].map((g) => [g, all.filter((m) => m.format === `pk${g}`).length]).filter(([, n]) => n);
+    const species = new Map();
+    for (const m of all) if (!m.summary.isEgg) species.set(m.summary.speciesName, (species.get(m.summary.speciesName) ?? 0) + 1);
+    const top = [...species].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 5);
+    const fact = (label, value) => h("div", { class: "stat-tile" }, h("span", { class: "stat-value" }, String(value)), h("span", { class: "stat-label" }, label));
+    return h("details", { class: "card home-stats", open: st.statsOpen || undefined, ontoggle: (e) => { st.statsOpen = e.target.open; } },
+      h("summary", null, "Statistics"),
+      h("div", { class: "stat-row" },
+        fact("species", species.size), fact("shiny", all.filter((m) => m.summary.shiny).length),
+        fact("eggs", all.filter((m) => m.summary.isEgg).length), fact("free slots", d.boxCount * d.boxSlots - all.length),
+        ...byGen.map(([g, n]) => fact(`Gen ${g}`, n))),
+      top.length && top[0][1] > 1 ? h("p", { class: "field-hint" }, "Most common: ", top.filter(([, c]) => c > 1).map(([n, c]) => `${n} ×${c}`).join(", ")) : null);
   }
 
   function pendingBanner(d) {
@@ -93,6 +114,7 @@ export async function mount(el, app) {
       h("button", { type: "button", class: "btn btn-primary", disabled: !!m.locked, onclick: () => app.go("saves", "withdraw", m.id) }, "Withdraw…"),
       h("button", { type: "button", class: "btn", disabled: !!m.locked, onclick: () => { st.moving = m.id; render(); } }, "Move"),
       h("button", { type: "button", class: "btn", disabled: !!m.locked, onclick: () => moveToBox(m) }, "Move to box…"),
+      h("button", { type: "button", class: "btn", onclick: () => exportMon(m) }, "Export…"),
       h("button", { type: "button", class: "btn btn-danger", disabled: !!m.locked, onclick: () => release(m) }, "Release"),
     ];
     const card = monCard(view, { base, provenance: full?.provenance, locked: m.locked, flags: m.flags, actions });
@@ -152,6 +174,29 @@ export async function mount(el, app) {
     if (name == null) return;
     try { await app.api.put(`api/home/box/${st.box}`, { name: name.trim() }); await home.refresh(); }
     catch (e) { toast(e.message, "error"); }
+  }
+
+  /** A Showdown set to paste into a teambuilder, and the .pkN file PKHeX and other editors open. */
+  async function exportMon(m) {
+    let detail, sd = null, sdError = null;
+    try { detail = st.detail?.id === m.id ? st.detail : await app.api.get(`api/home/mon/${encodeURIComponent(m.id)}`); }
+    catch (e) { toast(e.message, "error"); return; }
+    try { sd = await app.api.get(`api/home/mon/${encodeURIComponent(m.id)}/showdown`); } catch (e) { sdError = e.message; }
+    const file = toFile(fromBase64(detail.record), { format: detail.format, lang: detail.lang, game: detail.game });
+    const text = h("textarea", { class: "input export-text", readonly: true, rows: 9, "aria-label": "Showdown set" });
+    text.value = sd?.text ?? "";
+    await dialog({
+      title: `Export ${m.summary.isNicknamed ? m.summary.nickname : m.summary.speciesName}`,
+      body: h("div", null,
+        h("h3", { class: "section-label" }, `Showdown set (Gen ${sd?.gen ?? m.format.slice(2)})`),
+        sd ? text : h("p", { class: "field-hint" }, sdError),
+        sd?.notes?.length ? h("ul", { class: "help-list" }, sd.notes.map((n) => h("li", null, n))) : null,
+        sd && h("button", { type: "button", class: "btn btn-sm", onclick: async () => { await copyText(sd.text); toast("Copied.", "ok"); } }, "Copy set"),
+        h("h3", { class: "section-label" }, "Pokémon file"),
+        h("p", { class: "field-hint" }, `${file.filename} (${fmtBytes(file.bytes.length)}) opens in PKHeX and other save editors. It is a copy: the Pokémon stays in your Home.`),
+        h("button", { type: "button", class: "btn btn-sm", onclick: () => app.store.downloadBlob(file.bytes, file.filename) }, `Download .${detail.format}`)),
+      buttons: [{ label: "Close", value: true, kind: "primary" }],
+    });
   }
 
   async function release(m) {

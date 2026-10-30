@@ -114,3 +114,21 @@ test("a practice battle with a team from Home, and one with a save's party", asy
   const home = await authed("GET", "api/home");
   assert.equal(home.boxes[0].mons.length, 3, "battling changed nothing in Home");
 });
+
+test("exported Showdown text imports back as the same set (what Home's Export gives players)", async () => {
+  const { Teams, Dex } = await import("@pkmn/sim");
+  let n = 0;
+  for (const f of ["red-en.sav", "crystal-en.sav", "emerald-en.sav", "platinum-en.sav", "black2-en.sav"]) {
+    const save = await loadSave(f);
+    for (const e of [...save.party(), ...save.box(0)].filter((x) => x && !x.view.isEgg)) {
+      const { set } = toShowdownSet(e.view, e.view.gen);
+      const dex = Dex.forGen(e.view.gen);
+      const text = Teams.exportSet({ ...set, moves: set.moves.map((id) => dex.moves.get(id).name) });
+      const back = Teams.import(text)[0];
+      const pack = (x) => Teams.pack([{ ...x, moves: x.moves.map((m) => dex.moves.get(m).id) }]);
+      assert.equal(pack(back), pack(set), `${f} ${e.view.speciesName}`);
+      n++;
+    }
+  }
+  assert.ok(n > 30);
+});

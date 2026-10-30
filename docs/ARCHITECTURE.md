@@ -179,6 +179,7 @@ canConvert(meta, toFormat, { allowUnofficial, target })   // -> { ok, reason }
 tradeEvolve(record, meta, { partnerSpecies })             // -> { record, meta, from, to, notes } | null
 toShowdownSet(view, mechanicsGen, opts)                   // -> PokemonSet | throws FormatError if not representable
 defaultName(species, gen, lang)                           // the name the game gives an un-nicknamed Pokémon
+toFile(record, meta)                                      // shared/pkm/files.js: { bytes, filename } of a .pk1-.pk5 PKHeX opens
 ```
 
 Official paths: pk1 <-> pk2 (Time Capsule), pk3 -> pk4 (Pal Park), pk4 -> pk5 (Poké Transfer).
@@ -230,6 +231,7 @@ and a record whose fingerprint (sha256 of format + record) is already stored in 
 ```
 GET  /api/home                      -> { boxes: [{ index, name, mons: [{ id, slot, format, game, lang, summary, locked }] }], boxCount, boxSlots: 30 }
 GET  /api/home/mon/:id              -> { id, box, slot, format, lang, game, record, view, provenance: [], depositedAt, depositedBy, locked }
+GET  /api/home/mon/:id/showdown     -> { gen, format, text, notes }   (Showdown set for its own generation; 409 for Eggs)
 POST /api/home/deposit              { mons: [{ record, meta, box?, slot? }] } -> { stored: [{ id, box, slot }], warnings: [] }   (all or nothing)
 POST /api/home/move                 { id, box, slot }   (swaps with whatever is there)
 PUT  /api/home/box/:index           { name }

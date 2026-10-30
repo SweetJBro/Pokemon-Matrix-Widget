@@ -126,6 +126,20 @@ export function register(app, deps) {
     };
   });
 
+  /** The Pokémon as a Pokémon Showdown set (importable in the teambuilder), for its own generation.
+      Built by the same converter battles use, so the stats Showdown shows are the cartridge's. */
+  app.get("/api/home/mon/:id/showdown", async (ctx) => {
+    const r = getMon(ctx.user.id, ctx.params.id);
+    const { view } = readRecord(new Uint8Array(r.record), { format: r.format, lang: r.lang, game: r.game });
+    const [{ toShowdownSet }, { Teams, Dex }] = await Promise.all([import("./battle-teams.js"), import("@pkmn/sim")]);
+    try {
+      const { set, notes } = toShowdownSet(view, view.gen);
+      const dex = Dex.forGen(view.gen);
+      const named = { ...set, moves: set.moves.map((id) => dex.moves.get(id).name || id) };   // "Bubble Beam", not "bubblebeam"
+      return { gen: view.gen, format: `gen${view.gen}`, text: Teams.exportSet(named).trim(), notes };
+    } catch (e) { throw new HttpError(409, e.message); }
+  });
+
   app.post("/api/home/deposit", (ctx) => {
     const uid = ctx.user.id;
     limiter.check(uid);

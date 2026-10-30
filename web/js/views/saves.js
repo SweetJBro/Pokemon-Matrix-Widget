@@ -167,10 +167,22 @@ export async function mount(el, app) {
         h("div", null,
           h("h2", { class: "save-game" }, s.gameName || `Generation ${s.gen}`),
           h("div", { class: "field-hint" }, `${s.trainer?.name ?? ""} · ID ${String(s.trainer?.tid ?? "").padStart(5, "0")} · ${genLabel(`pk${s.gen}`)} · ${s.container?.label || ""}`)),
-        jump),
+        h("div", { class: "row" }, jump,
+          h("button", { type: "button", class: "btn btn-sm btn-ghost", disabled: !!s.readOnly, onclick: selectAll }, "Select all here"))),
       banners,
       h("div", { class: "split" }, h("div", null, frame, actions),
         focus ? monCard(focus.view, { base }) : h("div", { class: "card mon-card mon-card-hint" }, h("p", { class: "field-hint" }, "Click Pokémon to select them for depositing. The last one you click is shown here."))));
+  }
+
+  /** Bulk deposit: select every Pokémon shown (this box, or the party except the first one, which must stay). */
+  function selectAll() {
+    const isParty = st.box === PARTY;
+    const slots = isParty ? st.save.party() : st.save.box(st.box);
+    slots.forEach((e, i) => {
+      if (!e || (isParty && i === 0)) return;
+      st.picks.set(key(st.box, i), isParty ? { party: true, index: i } : { box: st.box, index: i });
+    });
+    render();
   }
 
   function pick(i) {
