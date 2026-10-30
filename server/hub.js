@@ -5,6 +5,7 @@
    and the server answers { type: "welcome", user }. After that:
      { type: "join", roomId }   subscribe to a Matrix room's presence/trade/battle feed
      { type: "leave", roomId }
+     { type: "activity", tab }  which tab this widget shows (saves | home | trade | battle), for presence
    plus whatever feature modules register with hub.on(type, handler). A message carrying `rid`
    gets exactly one { type: "reply", rid, ok, result | error } back.
 
@@ -27,6 +28,8 @@ export function createHub({ server, auth, config }) {
   const pending = new Set();     // connections that have not said hello yet
   const handlers = new Map();
   const leaveHooks = [];
+  const statusProviders = [];   // (userId) -> { battleId } | null, from feature modules (battles)
+  const TABS = new Set(["saves", "home", "trade", "battle"]);
   const fail = (status, message) => Object.assign(new Error(message), { status });
   const clientIp = (req) => (config.trustProxy && req.headers["x-forwarded-for"]?.split(",").pop().trim()) || req.socket.remoteAddress;
   const countIp = (ip) => { let n = 0; for (const c of conns) if (c.ip === ip) n++; for (const c of pending) if (c.ip === ip) n++; return n; };
@@ -80,6 +83,11 @@ export function createHub({ server, auth, config }) {
         if (msg.type === "join") result = join(conn, String(msg.roomId || ""));
         else if (msg.type === "leave") result = leave(conn, String(msg.roomId || ""));
         else if (msg.type === "ping") result = { t: Date.now() };
+        else if (msg.type === "activity") {
+          const tab = TABS.has(msg.tab) ? msg.tab : null;
+          if (tab !== conn.tab) { conn.tab = tab; conn.tabAt = Date.now(); for (const r of conn.rooms) broadcastPresence(r); }
+          result = null;
+        }
         else {
           const h = handlers.get(msg.type);
           if (!h) throw fail(400, "unknown message type " + msg.type);
@@ -127,10 +135,22 @@ export function createHub({ server, auth, config }) {
     conn.ws.send(JSON.stringify(msg));
   }
 
+  /** Who has the widget open in a room, and what they are doing: { id, displayName, activity, battleId? }.
+      activity: "battling" (from the battle module, so it is true even with the tab hidden), else the
+      tab of the user's most recently active widget: "trading", "home", "saves", "battle-lobby", or null. */
   function presence(roomId) {
-    const seen = new Map();
-    for (const c of conns) if (c.rooms.has(roomId)) seen.set(c.user.id, c.user);
-    return [...seen.values()];
+    const latest = new Map();
+    for (const c of conns) {
+      if (!c.rooms.has(roomId)) continue;
+      const prev = latest.get(c.user.id);
+      if (!prev || (c.tabAt ?? 0) > (prev.tabAt ?? 0)) latest.set(c.user.id, c);
+    }
+    return [...latest.values()].map((c) => {
+      let battleId = null;
+      for (const fn of statusProviders) { try { battleId ??= fn(c.user.id)?.battleId ?? null; } catch (e) { console.error(e); } }
+      const activity = battleId ? "battling" : { trade: "trading", home: "home", saves: "saves", battle: "battle-lobby" }[c.tab] ?? null;
+      return { ...c.user, activity, ...(battleId ? { battleId } : {}) };
+    });
   }
   function broadcastPresence(roomId) { broadcastRoom(roomId, { type: "presence", roomId, users: presence(roomId) }); }
 
@@ -153,6 +173,9 @@ export function createHub({ server, auth, config }) {
     on(type, fn) { handlers.set(type, fn); },
     /** Called with a user id when that user's last connection closes. */
     onUserOffline(fn) { leaveHooks.push(fn); },
+    /** fn(userId) -> { battleId } | null feeds presence; call refreshUser(id) when its answer changes. */
+    addStatusProvider(fn) { statusProviders.push(fn); },
+    refreshUser(userId) { for (const r of roomsOf(userId)) broadcastPresence(r); },
     sendUser, broadcastRoom, presence, isOnline, roomsOf,
     close() { clearInterval(ping); for (const c of [...conns, ...pending]) c.ws.terminate(); wss.close(); },
   };

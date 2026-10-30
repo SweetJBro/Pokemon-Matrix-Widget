@@ -115,6 +115,11 @@ export function register(app, deps) {
 }
 
 function createBattles({ db, config, hub }) {
+  // Presence shows who is in a battle (and which), whatever tab their widget shows.
+  hub.addStatusProvider((userId) => {
+    for (const b of battles.values()) if (b.status === "active" && (b.players.p1.id === userId || b.players.p2.id === userId)) return { battleId: b.id };
+    return null;
+  });
   db.raw.exec(SCHEMA);
   const challenges = new Map();   // id -> challenge
   const battles = new Map();      // id -> live battle (also finished ones for KEEP_FINISHED_MS)
@@ -220,6 +225,7 @@ function createBattles({ db, config, hub }) {
     const b = makeBattle({ id, roomId, options, meta, players: { p1, p2 }, createdAt });
     b.room = newRoom(b, { formatid: spec.id, seed, players: { p1: { name: p1.name, team: teams.p1 }, p2: { name: p2.name, team: teams.p2 } } });
     pushSummary(b);
+    for (const p of [p1, p2]) if (p.id !== CPU) hub.refreshUser(p.id);   // presence: now "battling"
     return b;
   }
 
@@ -248,6 +254,7 @@ function createBattles({ db, config, hub }) {
 
   function finishBattle(b, winner, reason) {
     if (b.status !== "active") return;
+    queueMicrotask(() => { for (const s of ["p1", "p2"]) if (b.players[s].id !== CPU) hub.refreshUser(b.players[s].id); });
     b.status = reason === "crash" ? "aborted" : "done";
     b.winner = winner;
     b.endedAt = Date.now();

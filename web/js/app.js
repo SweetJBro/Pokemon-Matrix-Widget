@@ -48,6 +48,7 @@ import * as matrix from "./matrix.js";
 import { createApi, Socket } from "./api.js";
 import { signIn, openIdLogin, openInBrowserTab, signOut } from "./auth.js";
 import { store } from "./savestore.js";
+import * as announcer from "./announce.js";
 
 const { h, clear } = ui;
 
@@ -170,13 +171,17 @@ async function main() {
 
 function startShell() {
   setPhase("app");
+  announcer.init(app);
   clear(mainEl);
   renderUser();
   app.api.onUnauthorized(() => reauth());
 
   const ws = new Socket({ getToken: () => app.api.token });
   app.ws = ws;
-  ws.onState((state, info) => { renderConnection(state, info); emit("connection", state, info); });
+  ws.onState((state, info) => {
+    renderConnection(state, info); emit("connection", state, info);
+    if (state === "open") reportActivity(true);   // presence starts empty on a fresh connection
+  });
   ws.on("presence", (m) => { if (m.roomId === app.roomId) setPresence(m.users); });
   ws.on("joined", (m) => { if (m.roomId === app.roomId && Array.isArray(m.users)) setPresence(m.users); });
   ws.on("welcome", (m) => { if (m.user && m.user.id !== app.user.id) console.warn("hub welcomed a different user", m.user.id); });
@@ -277,12 +282,28 @@ function renderPresence() {
   el.setAttribute("aria-label", `${ui.plural(n, "person", "people")} here`);
 }
 
+/** Tell the hub which tab this widget shows, for the activity in everyone's presence list. */
+let reportedTab = null;
+function reportActivity(force = false) {
+  if (!app.ws || app.ws.state !== "open" || !currentTab || (!force && reportedTab === currentTab)) return;
+  reportedTab = currentTab;
+  app.ws.send("activity", { tab: currentTab });
+}
+
+/** A person's activity as a badge: what they are doing in the widget right now. */
+export const ACTIVITY = { battling: ["Battling", "accent"], trading: ["Trading", "warn"], home: ["In Home", "ok"], saves: ["Moving Pokémon", "ok"], "battle-lobby": ["Looking for a battle", "ok"] };
+function activityBadge(u) {
+  const [text, kind] = ACTIVITY[u.activity] || ["Online", "ok"];
+  return ui.badge(text, kind);
+}
+
 function personRow(id, name, extra) {
   return h("li", { class: "person" }, ui.avatar(name, id, "sm"),
     h("span", { class: "person-text" }, h("span", { class: "person-name" }, name), h("span", { class: "person-id" }, id)),
     extra);
 }
 
+let closePresence = null;
 function showPresence() {
   const online = new Set(presenceUsers.map((u) => u.id));
   const others = app.members().filter((m) => !online.has(m.id));
@@ -291,13 +312,20 @@ function showPresence() {
     body: [
       h("h3", { class: "section-label" }, `Widget open (${presenceUsers.length})`),
       presenceUsers.length
-        ? h("ul", { class: "people" }, presenceUsers.map((u) => personRow(u.id, app.nameOf(u.id), u.id === app.user.id ? ui.badge("you", "accent") : ui.badge("online", "ok"))))
+        ? h("ul", { class: "people" }, presenceUsers.map((u) => personRow(u.id, app.nameOf(u.id), [
+            u.id === app.user.id ? ui.badge("you", "muted") : null,
+            activityBadge(u),
+            u.battleId && u.id !== app.user.id
+              ? h("button", { type: "button", class: "btn btn-sm btn-ghost", onclick: () => { closePresence?.(); app.go("battle", u.battleId); } }, "Watch")
+              : null,
+          ])))
         : h("p", { class: "muted" }, "Nobody yet."),
       others.length ? h("h3", { class: "section-label" }, `Other room members (${others.length})`) : null,
       others.length ? h("ul", { class: "people people-dim" }, others.map((m) => personRow(m.id, m.name))) : null,
     ],
     buttons: [{ label: "Close", value: true, kind: "primary" }],
-  });
+    onOpen: (ctx) => { closePresence = () => ctx.close(true); },
+  }).then(() => { closePresence = null; });
 }
 
 function showUserMenu() {
@@ -315,6 +343,7 @@ function showUserMenu() {
         ? "Verified by your homeserver through your Matrix client."
         : "Signed in in this browser tab."),
       store.persistent ? null : h("p", { class: "muted small" }, "This browser does not keep opened saves between visits here; always download your changes."),
+      announceSwitch(),
     ],
     buttons,
   }).then(async (v) => {
@@ -327,6 +356,21 @@ function showUserMenu() {
       location.reload();
     }
   });
+}
+
+/** "Announce my trades and battles in the room": asks the Matrix client for permission to post when switched on. */
+function announceSwitch() {
+  if (!announcer.available()) return null;
+  const box = h("input", { type: "checkbox", checked: announcer.enabled() });
+  const note = h("span", { class: "field-hint" }, "Posts a short notice in this room when you offer a trade, finish one, challenge someone or win a battle. Your Matrix client asks you to allow it.");
+  box.addEventListener("change", async () => {
+    box.disabled = true;
+    const ok = await announcer.setEnabled(app, box.checked);
+    box.checked = announcer.enabled();
+    box.disabled = false;
+    if (!ok) ui.toast("Your Matrix client did not allow the widget to post in the room.", "warn");
+  });
+  return h("label", { class: "check announce-switch" }, box, h("span", null, h("strong", null, "Announce my trades and battles in the room"), h("br"), note));
 }
 
 /* ---------- tabs ---------- */
@@ -356,7 +400,7 @@ async function showTab(route) {
     }
     el.hidden = currentTab !== name;   // the player may have switched tabs meanwhile
   }
-  if (currentTab === name) emit("tab", name, route);
+  if (currentTab === name) { emit("tab", name, route); reportActivity(); }
 }
 
 function teardownViews() {

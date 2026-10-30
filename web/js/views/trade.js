@@ -14,6 +14,7 @@ import { monSprite, genLabel } from "../components/mon-sprite.js";
 import { pickFromHome } from "../components/home-picker.js";
 import { homeState } from "../home/state.js";
 import { speciesName } from "../../shared/data/index.js";
+import { announce } from "../announce.js";
 
 const STATUS = { open: "Waiting for an answer", answered: "Waiting for confirmations", done: "Traded", cancelled: "Cancelled", expired: "Expired" };
 
@@ -143,8 +144,10 @@ export async function mount(el, app) {
     });
     if (!ids) return;
     try {
-      await app.api.post("api/trades", { roomId: app.roomId, to: to.value || null, offerMonId: ids[0], wanted: wants.value.trim() ? { note: wants.value.trim() } : null });
+      const t = await app.api.post("api/trades", { roomId: app.roomId, to: to.value || null, offerMonId: ids[0], wanted: wants.value.trim() ? { note: wants.value.trim() } : null });
       toast("Offer sent.", "ok");
+      const s = t.from.mon?.summary;
+      announce(app, "offer", { id: t.id, mon: s ? `${s.speciesName} Lv. ${s.level}` : "a Pokémon", to: t.to ? t.to.name || app.nameOf(t.to.user) : null, wanted: t.wanted?.note });
       home.refresh().catch(() => {});
       refresh();
     } catch (e) { toast(e.message, "error", { timeout: 9000 }); }
@@ -178,6 +181,11 @@ export async function mount(el, app) {
     try {
       const r = await app.api.post(`api/trades/${encodeURIComponent(t.id)}/confirm`, { fromMon: t.from.mon.id, toMon: t.to.mon.id });
       toast(r.status === "done" ? "Trade done!" : "Confirmed. Waiting for the other player.", "ok");
+      if (r.status === "done") {   // whoever confirms last announces it, so it is announced once
+        const evolved = (r.result?.evolved || []).map((e) => `${speciesName(e.from)} evolved into ${speciesName(e.to)}!`).join(" ");
+        const partner = mineFrom ? r.to : r.from;
+        announce(app, "trade-done", { id: r.id, partner: partner.name || app.nameOf(partner.user), gave: give.summary.speciesName, got: get.summary.speciesName, evolved });
+      }
       refresh(); home.refresh().catch(() => {});
     } catch (e) { toast(e.message, "error", { timeout: 9000 }); refresh(); }
   }

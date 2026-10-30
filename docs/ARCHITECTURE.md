@@ -305,6 +305,13 @@ listening; then `js/app.js` as a module.
   * `js/saves/session.js`: deposit and two-phase withdraw between a store entry and Home, with
     no DOM (tested in Node against the real server).
   * `js/home/state.js`: the cached `GET /api/home`, refreshed on `{ type: "home" }` pushes.
+* `js/announce.js`: opt-in room announcements (account dialog). Turning it on asks the Matrix
+  client for `org.matrix.msc2762.send.event:m.room.message#m.notice` through capability
+  renegotiation (MSC2974); later loads ask for it in the first handshake. Only the widget that
+  acted posts (offerer, last confirmer, challenger), so each event is announced once.
+* Presence: each widget reports its visible tab (`{ type: "activity", tab }`); the hub's presence
+  entries carry `activity` (`battling` from the battle module, else `trading`, `home`, `saves`,
+  `battle-lobby`) and `battleId`, shown in the presence dialog and the battle lobby (Watch).
 * `web/shared` is a symlink to `../shared` so Node resolves the browser's `../../shared/...`
   imports the same way the server's URL layout does (`/shared/` beside `/js/`).
 * `web/dev/fake-matrix.html`: two widgets (Alice, Bob) under a fake client that answers
