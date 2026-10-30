@@ -133,12 +133,17 @@ Text codecs (`shared/text/genN.js`): `decode(bytes, lang) -> string`, `encode(st
 `index.js`:
 
 ```js
-export function openSave(bytes, filename)  // -> SaveFile; throws FormatError with a user-facing message
-export async function exportSave(save)     // -> Uint8Array with the container restored
+export async function openSave(bytes, filename)  // -> SaveFile; throws FormatError with a user-facing message
+export function exportSave(save, mode = "same")  // -> Uint8Array; "same" restores the container, "plain" is the raw image
 ```
 
-`exportSave` is async because the Nintendo Switch Online Game Boy container stores a SHA-1 of
-the payload (WebCrypto is async). `container.js` strips and remembers emulator trailers and
+`openSave` is async because RetroArch-compressed (RZIP) saves are inflated with
+DecompressionStream; `exportSave` is synchronous (the Switch Online SHA-1 uses a synchronous
+implementation in shared/bytes.js). The returned SaveFile also has `container`, `filename`, a
+`readOnly` reason that merges the container's and the game's, and `warnings`; every writing
+method throws that reason when it is set. `shared/pkm/index.js` gives the record codecs one door:
+`codecFor(format)`, `readRecord(record, meta)`, `checkRecord(record, meta)` (the strict gate the
+server uses) and `identity(view)`. `container.js` strips and remembers emulator trailers and
 headers (MBC3 RTC footers, DeSmuME `.dsv` footer, NSO `SRAM` header, short or zero-filled PC-port
 files) so `exportSave` restores them unchanged. A save from a PC port with its own non-cartridge
 format (Gen1Recomp's Lua-table save) is refused with a message that names the port.
@@ -222,14 +227,25 @@ GET  /api/home/mon/:id              -> { id, box, slot, format, lang, game, reco
 POST /api/home/deposit              { mons: [{ record, meta, box?, slot? }] } -> { stored: [{ id, box, slot }], warnings: [] }   (all or nothing)
 POST /api/home/move                 { id, box, slot }   (swaps with whatever is there)
 PUT  /api/home/box/:index           { name }
-POST /api/home/withdraw/preview     { id, target: { format, game, lang }, allowUnofficial } -> { record, meta, view, notes, provenance }
-POST /api/home/withdraw             { id, target, allowUnofficial } -> { record, meta, view, notes }   (removes it from Home; history keeps a copy)
+POST /api/home/withdraw/preview     { id, target: { format, game, lang } } -> { ok, code?, reason?, view, notes, locked }
+POST /api/home/withdraw             { id, target } -> { id, record, meta, view, notes }   (locks it as "withdrawing")
+POST /api/home/withdraw/:id/commit                    the record is in the save: it leaves Home (history keeps a copy)
+POST /api/home/withdraw/:id/cancel                    putting it into the save failed or was abandoned: unlock
 POST /api/home/release              { id }
 GET  /api/home/history?limit=50     -> { entries: [{ at, action, monId, detail }] }
 ```
 
+`GET /api/home` also returns `pendingWithdrawals: [{ id, target, createdAt }]`, so a withdrawal
+whose tab closed half-way can be finished or cancelled later; a Pokémon is never in neither
+place. Each listed Pokémon carries `flags` from its provenance (`deposit`, `seen-before`, ...).
+Save files can be copied, so cloning cannot be prevented; the server keeps a ledger of each
+individual Pokémon's identity and marks a deposit "seen-before" when the same Pokémon is in
+another player's Home or left another player's Home earlier.
+
 A Pokémon locked by an open trade cannot be moved, withdrawn or released. Withdrawal converts
-lazily (`convert`), and the browser puts the returned record into the open save with `putInBox`.
+lazily (`convert`; until it exists only same-format withdrawals are allowed and others answer 409
+with `code: "conversion"`), and the browser puts the returned record into the open save with
+`putInBox` (which enforces the target game's own limits) before committing.
 
 ### Trade API (`server/trades.js`)
 
@@ -268,5 +284,13 @@ listening; then `js/app.js` as a module.
   widget iframe is partitioned or ephemeral, so IndexedDB is best-effort and the UI always offers
   the download. Downloads use a Blob `<a download>` from a click.
 * `js/views/{saves,home,trade,battle}.js`: one module per tab, each `export function mount(el, app)`.
+  Views stay thin and build their layout from:
+  * `js/components/`: `box-grid.js` (`boxGrid`, `boxFrame`: save boxes, Home boxes, pickers),
+    `mon-card.js` (detail card with stats, moves and provenance), `mon-sprite.js`, `filters.js`.
+  * `js/saves/session.js`: deposit and two-phase withdraw between a store entry and Home, with
+    no DOM (tested in Node against the real server).
+  * `js/home/state.js`: the cached `GET /api/home`, refreshed on `{ type: "home" }` pushes.
+* `web/shared` is a symlink to `../shared` so Node resolves the browser's `../../shared/...`
+  imports the same way the server's URL layout does (`/shared/` beside `/js/`).
 * `web/dev/fake-matrix.html`: two widgets (Alice, Bob) under a fake client that answers
   capabilities, `get_openid` (two-phase), `update_state` and room events; run with `DEV_AUTH=1`.

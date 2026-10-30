@@ -156,10 +156,13 @@ test("gen5: party()[i] is the Pokémon takeFromParty(i) takes, even with an empt
 
 /* ---------- PKHeX's reading of generated Pokémon (all four games, all seven languages) ---------- */
 
-const vectors = JSON.parse(fs.readFileSync(path.join(dir, "stage2-gen5", "pk5-vectors.json"), "utf8"));
-const RIBBON_ORDER = vectors.ribbonOrder;
+// Generated with the PKHeX oracle by the Gen 5 fuzz run (docs: test/fixtures/README.md). Until that file is
+// committed the comparison is skipped rather than failing the whole file.
+const VECTORS = path.join(dir, "stage2-gen5", "pk5-vectors.json");
+const vectors = fs.existsSync(VECTORS) ? JSON.parse(fs.readFileSync(VECTORS, "utf8")) : null;
+const RIBBON_ORDER = vectors?.ribbonOrder;
 
-test("pk5: PKHeX's reading of generated records (every game and language) matches ours; build(parse(r)) is exact", () => {
+test("pk5: PKHeX's reading of generated records (every game and language) matches ours; build(parse(r)) is exact", { skip: !vectors && "test/fixtures/stage2-gen5/pk5-vectors.json not generated yet" }, () => {
   assert.ok(vectors.mons.length >= 100);
   const ours = (() => {   // our ribbon names in bit order, to compare with PKHeX's property names
     const f = pk5.parse(pk5.emptyRecord()), names = [];

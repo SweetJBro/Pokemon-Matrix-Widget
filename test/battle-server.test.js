@@ -284,25 +284,36 @@ test("turn timer: two automatic moves, then a loss on time", async () => {
 
 test("reconnect and late spectators get a snapshot that replays to the live state", async () => {
   const t = await trio();
+  const extra = [];
   try {
     const id = await startBattle(t, { gen: 2, preset: "cartridge", teamSize: 6, timer: 0 });
     await until(() => t.carol.view(id).state.turn >= 3, 20000, "turn 3");
     const bob2 = await new Client(base, tokens.bob, { play: false }).open();
+    extra.push(bob2);
     const v = await bob2.join(id);
     assert.equal(v.role, "p2");
-    const live = t.bob.view(id).state;
-    assert.equal(v.state.turn, live.turn);
-    assert.deepEqual(v.state.sides.p2.active.map((m) => m?.hp), live.sides.p2.active.map((m) => m?.hp));
-    const dan = await new Client(base, await signIn(base, "dan"), { play: false });
+    // The players keep playing while the snapshot travels, so the replayed state can only be
+    // compared with the live one once nothing moves any more (after the battle ends, below).
+    assert.ok(v.state.turn >= 3, "the snapshot replays the turns already played");
+    const dan = new Client(base, await signIn(base, "dan"), { play: false });
+    extra.push(dan);
     dan.ws.connect();
     await assert.rejects(dan.join(id), /in that room/);   // not in the room: no peeking
     await dan.ws.join(ROOM);
     const dv = await dan.join(id);
     assert.equal(dv.role, "spectator");
     await playOut([t.alice, t.bob, t.carol, dan], id);
-    assert.equal(bob2.view(id).state.winner, live.winner, "the second widget followed along");
-    bob2.close(); dan.close();
-  } finally { t.close(); }
+    const live = t.bob.view(id).state;
+    await until(() => bob2.view(id).state.ended, 10000, "second widget sees the end");
+    const mine = bob2.view(id).state;
+    assert.equal(mine.winner, live.winner, "the second widget followed along");
+    assert.equal(mine.turn, live.turn);
+    assert.deepEqual(mine.sides.p2.active.map((m) => m?.hp), live.sides.p2.active.map((m) => m?.hp));
+  } finally {
+    // A failed assertion must not leave reconnecting sockets behind: they keep the test process alive.
+    extra.forEach((c) => c.close());
+    t.close();
+  }
 });
 
 test("practice battle against the CPU", async () => {
