@@ -26,7 +26,7 @@ export function monCard(view, { base, provenance, locked, flags = [], actions = 
       view.types && !view.isEgg && h("div", { class: "row" }, view.types.map((t) => h("span", { class: `type type-${typeClass(t)}` }, t))),
       badges));
   const facts = h("dl", { class: "mon-facts" },
-    fact("OT", view.ot?.name ? `${view.ot.name} · ${String(view.ot.tid).padStart(5, "0")}` : null),
+    fact("OT", view.ot?.name ? (view.ot.tid != null ? `${view.ot.name} · ${String(view.ot.tid).padStart(5, "0")}` : view.ot.name) : null),   // the showroom has no IDs
     fact("Nature", view.nature), fact("Ability", view.ability), fact("Item", view.heldItem),
     fact("Ball", view.ball), fact("Friendship", view.friendship),
     fact("Met", view.met ? [view.met.locationName, view.met.level ? `Lv. ${view.met.level}` : null, view.met.date].filter(Boolean).join(" · ") || null : null),

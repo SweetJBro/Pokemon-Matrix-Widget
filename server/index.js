@@ -12,6 +12,7 @@ import { Router, HttpError, sendJson, readJson, RateLimiter } from "./http.js";
 import * as home from "./home.js";
 import * as trades from "./trades.js";
 import * as battles from "./battles.js";
+import * as showroom from "./showroom.js";
 
 const TYPES = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".mjs": "text/javascript; charset=utf-8",
@@ -42,6 +43,7 @@ export function createServer(config = loadConfig()) {
   home.register(app, deps);
   trades.register(app, deps);
   battles.register(app, deps);
+  showroom.register(app, deps);
 
   // Self-hosted sprites (scripts/fetch-sprites.sh fills SPRITES_DIR from a pinned commit) at /sprites/.
   const statics = config.spritesDir
@@ -77,7 +79,7 @@ export function createServer(config = loadConfig()) {
       const result = await m.route.handler(ctx);
       if (res.headersSent) return;
       if (result === undefined) { res.writeHead(204); return res.end(); }
-      return sendJson(res, 200, result);
+      return sendJson(res, 200, result, {}, req);
     }
     return serveStatic(req, res, p);
   }

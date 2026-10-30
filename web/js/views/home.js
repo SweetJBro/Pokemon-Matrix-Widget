@@ -64,7 +64,8 @@ export async function mount(el, app) {
         text: "Open a save in the Saves tab, pick Pokémon and deposit them. They wait here for trades and battles, and you can withdraw them into any save of the same generation.",
         action: { label: "Open a save", onClick: () => app.go("saves") },
       })),
-      h("div", { class: "row home-head" }, h("h2", { class: "home-title" }, `Home · ${plural(total, "Pokémon", "Pokémon")}`), jump),
+      h("div", { class: "row home-head" }, h("h2", { class: "home-title" }, `Home · ${plural(total, "Pokémon", "Pokémon")}`),
+        h("div", { class: "row" }, jump, h("button", { type: "button", class: "btn btn-sm", onclick: shareDialog }, "Share…"))),
       total ? statsPanel(d) : null,
       bar,
       st.moving && h("div", { class: "banner" }, "Choose where it goes: click a slot in any box (switch boxes with ‹ ›). ",
@@ -145,6 +146,9 @@ export async function mount(el, app) {
     st.focusId = cell?.id ?? null;
     if (st.detail?.id !== st.focusId) st.detail = null;
     render();
+    // Narrow screens stack the card under the box (app.css .split); bring it into view.
+    if (st.focusId && globalThis.matchMedia?.("(max-width: 820px)").matches)
+      root.querySelector(".mon-card")?.scrollIntoView({ block: "start" });   // instant: the card re-renders when its details arrive, which cancels a smooth scroll
   }
 
   async function move(id, box, slot) {
@@ -197,6 +201,41 @@ export async function mount(el, app) {
         h("button", { type: "button", class: "btn btn-sm", onclick: () => app.store.downloadBlob(file.bytes, file.filename) }, `Download .${detail.format}`)),
       buttons: [{ label: "Close", value: true, kind: "primary" }],
     });
+  }
+
+  /** The showroom: an opt-in, read-only link to chosen boxes (server/showroom.js). */
+  async function shareDialog() {
+    let cfg;
+    try { cfg = await app.api.get("api/showroom"); } catch (e) { toast(e.message, "error"); return; }
+    const d = home.data;
+    const linkOf = (token) => new URL(`showroom.html#${token}`, app.config.publicUrl || location.href).href;
+    const on = h("input", { type: "checkbox", checked: cfg.enabled });
+    const all = h("input", { type: "checkbox", checked: !cfg.boxes });
+    const picks = d.boxes.map((b) => h("input", { type: "checkbox", value: String(b.index), checked: !cfg.boxes || cfg.boxes.includes(b.index) }));
+    const boxList = h("div", { class: "share-boxes" }, d.boxes.map((b, i) => b.mons.length || cfg.boxes?.includes(b.index)
+      ? h("label", { class: "check" }, picks[i], ` ${b.name} (${b.mons.length})`) : null));
+    const link = h("input", { class: "input", readonly: true, value: linkOf(cfg.token), "aria-label": "Showroom link" });
+    const syncBoxes = () => { boxList.hidden = all.checked; };
+    all.addEventListener("change", syncBoxes); syncBoxes();
+    const v = await dialog({
+      title: "Share your Home",
+      body: h("div", null,
+        h("p", { class: "field-hint" }, "Anyone with the link can look at the boxes you choose: species, nicknames, levels, items and OT names. Nobody can take or change anything. Turn it off or make a new link at any time."),
+        h("label", { class: "check" }, on, " Showroom link is on"),
+        h("label", { class: "check" }, all, " Show every box"),
+        boxList,
+        h("div", { class: "row" }, link,
+          h("button", { type: "button", class: "btn btn-sm", onclick: async () => { await copyText(link.value); toast("Link copied.", "ok"); } }, "Copy")),
+        h("button", { type: "button", class: "btn btn-sm btn-ghost", onclick: async () => {
+          try { cfg = await app.api.post("api/showroom/rotate"); link.value = linkOf(cfg.token); toast("New link made. The old one no longer works.", "ok"); }
+          catch (e) { toast(e.message, "error"); }
+        } }, "New link (turns the old one off)")),
+      buttons: [{ label: "Cancel", value: false, kind: "ghost" }, { label: "Save", value: true, kind: "primary" }],
+    });
+    if (!v) return;
+    const boxes = all.checked ? null : picks.filter((p) => p.checked).map((p) => Number(p.value));
+    try { await app.api.post("api/showroom", { enabled: on.checked, boxes }); toast(on.checked ? "Showroom is on." : "Showroom is off.", "ok"); }
+    catch (e) { toast(e.message, "error"); }
   }
 
   async function release(m) {

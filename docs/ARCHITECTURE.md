@@ -215,6 +215,8 @@ repository (package size limit).
 * Storage: `node:sqlite`. Home Pokémon are stored as records plus a cached `MonView`; the server
   re-parses and validates every record it receives.
 * REST for Home and trades, one WebSocket per widget for presence, trade updates and battles.
+  JSON bodies over 8 KiB are sent brotli/gzip-compressed (a full 1,200-Pokémon Home listing is
+  ~460 KiB raw, ~27 KiB compressed; the server answers it in ~6 ms).
 * Limits (server/config.js documents the variables): API requests per client address per minute;
   WebSocket connections per user, per address and in total, messages per connection (token
   bucket), message size (64 KiB) and unsent backlog (1 MiB); request and header timeouts;
@@ -258,6 +260,14 @@ The preview returns the converted view, the notes and `rules` (`time-capsule`, `
 `putInBox` (which enforces the target game's own limits), registers it in the save's Pokédex, and
 commits. On commit the converted Pokémon's new identity goes into the ledger, so one converted
 unofficially carries an `unofficial` flag whenever it is deposited again.
+
+### Showroom (`server/showroom.js`, `web/showroom.html`)
+
+An opt-in, read-only link to chosen Home boxes that anyone can open without signing in:
+`showroom.html#<token>` (the token stays in the fragment, out of request lines and logs).
+`GET/POST /api/showroom` (owner: `{ enabled, token, boxes }`), `POST /api/showroom/rotate` (new
+token; the old link stops working), `GET /api/showroom/view/:token` (public: box names and
+Pokémon summaries with OT names, no trainer IDs, records, locks or trades; 404 when off).
 
 ### Trade API (`server/trades.js`)
 

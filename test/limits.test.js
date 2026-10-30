@@ -85,3 +85,23 @@ test("the app page gets a strict Content-Security-Policy; the dev harness keeps 
   assert.equal((await fetch(s.base + "/dev/fake-matrix.html")).headers.get("content-security-policy"), "frame-ancestors * vector:");
   assert.equal((await fetch(s.base + "/js/app.js")).headers.get("x-content-type-options"), "nosniff");
 });
+
+test("large JSON responses are compressed when the client accepts it", async () => {
+  const s = await start();
+  const token = await s.login("@big:example.org");
+  // A box of real Pokémon makes the listing well over the 8 KiB threshold.
+  const { openSave } = await import("../shared/saves/index.js");
+  const { toBase64 } = await import("../shared/bytes.js");
+  const fs = await import("node:fs");
+  const save = await openSave(new Uint8Array(fs.readFileSync(new URL("./fixtures/saves/emerald-en.sav", import.meta.url))), "e.sav");
+  const mons = save.box(1).filter(Boolean).map((e) => ({ record: toBase64(e.record), meta: e.meta }));
+  const dep = await fetch(s.base + "/api/home/deposit", { method: "POST", headers: { authorization: "Bearer " + token }, body: JSON.stringify({ mons }) });
+  assert.equal(dep.status, 200);
+  for (const [accept, want] of [["br, gzip", "br"], ["gzip", "gzip"], ["identity", null]]) {
+    const r = await fetch(s.base + "/api/home", { headers: { authorization: "Bearer " + token, "accept-encoding": accept } });
+    assert.equal(r.headers.get("content-encoding"), want, accept);
+    assert.equal((await r.json()).boxes[0].mons.length, mons.length, "still the same JSON");
+  }
+  const small = await fetch(s.base + "/api/me", { headers: { authorization: "Bearer " + token, "accept-encoding": "gzip" } });
+  assert.equal(small.headers.get("content-encoding"), null, "small bodies are sent as they are");
+});

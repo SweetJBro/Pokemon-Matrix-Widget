@@ -56,12 +56,13 @@ export function boxGrid({ cells, base, onPick, pickEmpty = true, onDrop, label =
 
 /** Box frame with ‹ name › header around a grid. onName (optional) makes the name a rename button. */
 export function boxFrame({ name, onPrev, onNext, onName, grid, extra }) {
+  const nav = !!(onPrev || onNext);   // a fixed list of boxes (showroom) has no arrows
   return h("div", { class: "box" },
     h("div", { class: "box-header" },
-      h("button", { type: "button", class: "btn btn-icon", "aria-label": "Previous box", onclick: onPrev, disabled: !onPrev }, "‹"),
+      nav && h("button", { type: "button", class: "btn btn-icon", "aria-label": "Previous box", onclick: onPrev, disabled: !onPrev }, "‹"),
       onName
         ? h("button", { type: "button", class: "box-name box-name-btn", title: "Rename this box", onclick: onName }, name)
         : h("span", { class: "box-name" }, name),
-      h("button", { type: "button", class: "btn btn-icon", "aria-label": "Next box", onclick: onNext, disabled: !onNext }, "›")),
+      nav && h("button", { type: "button", class: "btn btn-icon", "aria-label": "Next box", onclick: onNext, disabled: !onNext }, "›")),
     grid, extra);
 }
